@@ -1,25 +1,32 @@
 import * as React from "react";
 
-export function Table({ className, ...props }) {
-  return <table className={`w-full border-collapse text-sm ${className}`} {...props} />;
+export function Tabs({ defaultValue, children }) {
+  const [value, setValue] = React.useState(defaultValue);
+  return (
+    <div>
+      {React.Children.map(children, (child) =>
+        React.cloneElement(child, { value, setValue })
+      )}
+    </div>
+  );
 }
 
-export function TableHeader({ className, ...props }) {
-  return <thead className={`bg-slate-100 ${className}`} {...props} />;
+export function TabsList({ children, className }) {
+  return <div className={`flex border-b mb-4 ${className}`}>{children}</div>;
 }
 
-export function TableBody({ className, ...props }) {
-  return <tbody className={className} {...props} />;
+export function TabsTrigger({ value, setValue, children }) {
+  return (
+    <button
+      onClick={() => setValue(value)}
+      className="px-4 py-2 text-sm font-medium border-b-2 border-transparent data-[active=true]:border-blue-500 data-[active=true]:text-blue-600"
+      data-active={setValue ? undefined : true}
+    >
+      {children}
+    </button>
+  );
 }
 
-export function TableRow({ className, ...props }) {
-  return <tr className={`border-b last:border-0 ${className}`} {...props} />;
-}
-
-export function TableHead({ className, ...props }) {
-  return <th className={`px-4 py-2 text-left font-medium text-slate-600 ${className}`} {...props} />;
-}
-
-export function TableCell({ className, ...props }) {
-  return <td className={`px-4 py-2 ${className}`} {...props} />;
+export function TabsContent({ value, setValue, children }) {
+  return setValue === value ? <div>{children}</div> : null;
 }
