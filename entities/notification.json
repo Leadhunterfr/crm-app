@@ -1,0 +1,60 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur destinataire"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur destinataire"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titre de la notification"
+    },
+    "message": {
+      "type": "string",
+      "description": "Contenu de la notification"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "contact_assigned",
+        "note_added",
+        "status_changed",
+        "mention",
+        "system"
+      ],
+      "description": "Type de notification"
+    },
+    "link": {
+      "type": "string",
+      "description": "Lien vers la ressource concernée"
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "ID du contact concerné (si applicable)"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Statut de lecture"
+    },
+    "from_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui a déclenché la notification"
+    },
+    "from_user_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur qui a déclenché la notification"
+    }
+  },
+  "required": [
+    "user_id",
+    "title",
+    "message",
+    "type"
+  ]
+}
