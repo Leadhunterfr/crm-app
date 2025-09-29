@@ -1,0 +1,104 @@
+{
+  "name": "Contact",
+  "type": "object",
+  "properties": {
+    "prenom": {
+      "type": "string",
+      "description": "Prénom du contact"
+    },
+    "nom": {
+      "type": "string",
+      "description": "Nom de famille du contact"
+    },
+    "societe": {
+      "type": "string",
+      "description": "Nom de l'entreprise"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Adresse email"
+    },
+    "telephone": {
+      "type": "string",
+      "description": "Numéro de téléphone"
+    },
+    "site_web": {
+      "type": "string",
+      "format": "uri",
+      "description": "Site web du contact ou de l'entreprise"
+    },
+    "linkedin": {
+      "type": "string",
+      "description": "Profil LinkedIn du contact"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["Site web", "Référence", "LinkedIn", "Salon", "Publicité", "Autre"],
+      "default": "Site web",
+      "description": "Source d'acquisition"
+    },
+    "statut": {
+      "type": "string",
+      "enum": ["Prospect", "Contacté", "Qualifié", "Proposition", "Négociation", "Client", "Perdu"],
+      "default": "Prospect",
+      "description": "Statut dans le pipeline"
+    },
+    "derniere_interaction": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de la dernière interaction"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de création du contact"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes et commentaires"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tags pour catégoriser le contact"
+    },
+    "adresse": {
+      "type": "string",
+      "description": "Adresse postale"
+    },
+    "fonction": {
+      "type": "string",
+      "description": "Fonction/poste du contact"
+    },
+    "valeur_estimee": {
+      "type": "number",
+      "description": "Valeur estimée de l'opportunité"
+    },
+    "temperature": {
+      "type": "string",
+      "enum": ["Chaud", "Tiède", "Froid"],
+      "description": "Température de l'opportunité (chaud, tiède, froid)"
+    },
+    "date_cloture_prevue": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de clôture prévue"
+    },
+    "assigned_to_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur assigné au contact"
+    },
+    "assigned_to_user_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur assigné au contact"
+    },
+    "methode_contact_preferee": {
+      "type": "string",
+      "enum": ["Email", "Téléphone", "LinkedIn", "Autre", "Non spécifié"],
+      "default": "Non spécifié",
+      "description": "Canal de communication préféré par le contact"
+    }
+  },
+  "required": ["nom", "email"]
+}
