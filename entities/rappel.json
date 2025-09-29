@@ -1,0 +1,56 @@
+{
+  "name": "Rappel",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant unique du rappel"
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "ID du contact à rappeler"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui doit effectuer le rappel"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur assigné au rappel"
+    },
+    "date_rappel": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure du rappel"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Appel",
+        "Email",
+        "Autre"
+      ],
+      "description": "Type de rappel"
+    },
+    "note": {
+      "type": "string",
+      "description": "Note pour le rappel"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indique si le rappel a été effectué"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de création du rappel"
+    }
+  },
+  "required": [
+    "contact_id",
+    "user_id",
+    "date_rappel",
+    "type"
+  ]
+}
