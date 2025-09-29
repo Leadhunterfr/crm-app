@@ -1,0 +1,89 @@
+{
+  "name": "Interaction",
+  "type": "object",
+  "properties": {
+    "contact_id": {
+      "type": "string",
+      "description": "ID du contact concerné"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Appel",
+        "Email",
+        "LinkedIn",
+        "Réunion",
+        "Note",
+        "Modification",
+        "NoteInterne"
+      ],
+      "description": "Type d'interaction"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description de l'interaction"
+    },
+    "date_interaction": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure de l'interaction"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure de création de l'enregistrement"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui a créé l'interaction"
+    },
+    "created_by_user_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur qui a créé l'interaction"
+    },
+    "statut_precedent": {
+      "type": "string",
+      "enum": [
+        "Prospect",
+        "Contacté",
+        "Qualifié",
+        "Proposition",
+        "Négociation",
+        "Client",
+        "Perdu"
+      ],
+      "description": "Statut précédent du contact"
+    },
+    "statut_actuel": {
+      "type": "string",
+      "enum": [
+        "Prospect",
+        "Contacté",
+        "Qualifié",
+        "Proposition",
+        "Négociation",
+        "Client",
+        "Perdu"
+      ],
+      "description": "Nouveau statut du contact"
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des utilisateurs mentionnés dans cette interaction"
+    },
+    "internal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si vrai, cette interaction est interne à l'équipe"
+    }
+  },
+  "required": [
+    "contact_id",
+    "type",
+    "description",
+    "date_interaction"
+  ]
+}
