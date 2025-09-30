@@ -31,9 +31,6 @@ export function TabsContent({ value, setValue, children }) {
   return setValue === value ? <div>{children}</div> : null;
 }
 
-// components/ui/table.js
-import React from "react";
-
 export function Table({ children, className }) {
   return (
     <table className={`w-full border-collapse ${className || ""}`}>
