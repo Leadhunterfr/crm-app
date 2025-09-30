@@ -1,37 +1,33 @@
+// components/ui/tabs.js
 import * as React from "react";
 
-export function Tabs({ children, defaultValue }) {
-  const [active, setActive] = React.useState(defaultValue);
+export function Tabs({ defaultValue, children }) {
+  const [value, setValue] = React.useState(defaultValue);
   return (
     <div>
       {React.Children.map(children, (child) =>
-        React.cloneElement(child, { active, setActive })
+        React.cloneElement(child, { value, setValue })
       )}
     </div>
   );
 }
 
-export function TabsList({ children }) {
-  return <div className="flex border-b">{children}</div>;
+export function TabsList({ children, className }) {
+  return <div className={`flex border-b mb-4 ${className}`}>{children}</div>;
 }
 
-export function TabsTrigger({ value, active, setActive, children }) {
-  const isActive = active === value;
+export function TabsTrigger({ value, setValue, children }) {
   return (
     <button
-      onClick={() => setActive(value)}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-        isActive
-          ? "border-blue-500 text-blue-600"
-          : "border-transparent text-slate-500 hover:text-slate-700"
-      }`}
+      onClick={() => setValue(value)}
+      className="px-4 py-2 text-sm font-medium border-b-2 border-transparent data-[active=true]:border-blue-500 data-[active=true]:text-blue-600"
+      data-active={setValue ? undefined : true}
     >
       {children}
     </button>
   );
 }
 
-export function TabsContent({ value, active, children }) {
-  if (active !== value) return null;
-  return <div className="p-4">{children}</div>;
+export function TabsContent({ value, setValue, children }) {
+  return setValue === value ? <div>{children}</div> : null;
 }
