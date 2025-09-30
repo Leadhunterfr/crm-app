@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { Lock, Mail } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,19 +17,15 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (!res.ok) {
-        const { message } = await res.json();
-        throw new Error(message || "Identifiants incorrects");
-      }
+      if (error) throw error;
 
-      // après connexion → contacts
-      router.push("/contacts");
+      console.log("Connexion réussie:", data);
+      router.push("/contacts"); // après connexion
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -45,7 +42,6 @@ export default function LoginPage() {
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          {/* Email */}
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -58,7 +54,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Mot de passe */}
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -71,26 +66,24 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Erreur */}
-          {error && (
-            <p className="text-sm text-red-500 text-center">{error}</p>
-          )}
-
-          {/* Bouton connexion */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-medium transition-colors"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
 
-        {/* Lien mot de passe oublié */}
+        {error && (
+          <p className="text-red-500 text-sm mt-3 text-center">{error}</p>
+        )}
+
         <div className="text-center mt-4">
           <button
-            onClick={() => router.push("/reset-password")}
+            type="button"
             className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
+            onClick={() => router.push("/reset-password")}
           >
             Mot de passe oublié ?
           </button>
