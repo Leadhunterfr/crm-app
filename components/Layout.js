@@ -34,6 +34,12 @@ export default function Layout({ children }) {
           >
             <Shield className="w-5 h-5" /> Utilisateurs
           </Link>
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+          >
+            <Shield className="w-5 h-5" /> Réglages
+          </Link>
         </nav>
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-sm text-slate-500">
           © 2025 CRM
