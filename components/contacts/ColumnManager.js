@@ -197,3 +197,29 @@ export default function ColumnManager({ columns, onColumnsChange, onClose }) {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                onClick={() => removeColumn(column.id)}
+                                className="h-8 w-8 text-red-500"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button onClick={handleSave}>Enregistrer</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
