@@ -178,7 +178,10 @@ export default function ContactsPage() {
           <EnhancedContactTable
             contacts={filteredContacts}
             loading={loading}
-            onView={setSelectedContact}
+            onView={(contact) => {
+              setSelectedContact(contact);
+              setShowContactDetails(true);
+            }}
             onEdit={setEditingContact}
             onDelete={handleDeleteContact}
             onUpdate={handleUpdateContact}
