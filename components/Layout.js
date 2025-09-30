@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Shield, Pipeline, Home } from "lucide-react";
+import { Users, Shield, Workflow, Home } from "lucide-react";
 
 export default function Layout({ children }) {
   return (
