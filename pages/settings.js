@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { getSession, useSession } from "next-auth/react"; // si tu utilises next-auth
+// pages/settings.js
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch"; // si tu as un composant switch
-import { SignOut, Mail, Key } from "lucide-react";
-import { Core } from "@/integrations/Core"; // ou fonctions OAuth que tu vas créer
+import { Switch } from "@/components/ui/switch";
+import { Mail, Key, UserPlus } from "lucide-react";
 
 export default function SettingsPage({ userData }) {
-  // userData pourrait être chargé via getServerSideProps ou fetch dans useEffect
   const [fullName, setFullName] = useState(userData?.fullName || "");
   const [email, setEmail] = useState(userData?.email || "");
   const [telephone, setTelephone] = useState(userData?.telephone || "");
@@ -17,33 +15,68 @@ export default function SettingsPage({ userData }) {
   const [darkMode, setDarkMode] = useState(userData?.darkMode || false);
   const [isAdmin, setIsAdmin] = useState(userData?.role === "admin");
 
-  const [mailConnected, setMailConnected] = useState(false);
-  const [mailAddress, setMailAddress] = useState("");
+  const [mailConnected, setMailConnected] = useState(userData?.mailConnected || false);
+  const [mailAddress, setMailAddress] = useState(userData?.mailAddress || "");
 
   const handleSaveProfile = async () => {
-    // appelle ton API pour sauvegarder le profil
-    console.log("Sauvegarde profil", { fullName, email, telephone, department, darkMode });
-    // Exemple : await fetch("/api/user/update", { method: "POST", body: JSON.stringify(...) });
+    try {
+      const res = await fetch("/api/user/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, telephone, department, darkMode }),
+      });
+      if (!res.ok) throw new Error("Erreur mise à jour profil");
+      alert("Profil mis à jour ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la sauvegarde ❌");
+    }
   };
 
   const handlePasswordReset = async () => {
-    // appelle ton API backend pour envoyer email de réinitialisation de mot de passe
-    console.log("Envoi lien réinitialisation mot de passe pour", email);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("Erreur envoi reset");
+      alert("Email de réinitialisation envoyé ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'envoi du mail ❌");
+    }
   };
 
-  const handleConnectGmail = async () => {
-    // redirige vers l’URL OAuth Gmail / backend
-    // Exemple : window.location.href = "/api/oauth/google";
-    console.log("Connecter Gmail");
+  const handleConnectGmail = () => {
+    window.location.href = "/api/oauth/google";
   };
 
-  const handleConnectOutlook = async () => {
-    console.log("Connecter Outlook");
+  const handleConnectOutlook = () => {
+    window.location.href = "/api/oauth/outlook";
+  };
+
+  const handleInviteUser = async () => {
+    const inviteEmail = prompt("Email du nouvel utilisateur :");
+    if (!inviteEmail) return;
+    try {
+      const res = await fetch("/api/admin/invite-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      if (!res.ok) throw new Error("Erreur invitation");
+      alert("Invitation envoyée ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur envoi invitation ❌");
+    }
   };
 
   return (
     <div className="p-6 bg-slate-100 dark:bg-slate-900 min-h-screen">
       <div className="max-w-3xl mx-auto space-y-8">
+        {/* Profil */}
         <Card>
           <CardHeader>
             <CardTitle>Mon profil</CardTitle>
@@ -59,12 +92,7 @@ export default function SettingsPage({ userData }) {
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled
-              />
+              <Input id="email" value={email} disabled />
             </div>
             <div>
               <Label htmlFor="telephone">Téléphone</Label>
@@ -96,6 +124,7 @@ export default function SettingsPage({ userData }) {
           </CardContent>
         </Card>
 
+        {/* Mot de passe */}
         <Card>
           <CardHeader>
             <CardTitle>Mot de passe</CardTitle>
@@ -109,6 +138,7 @@ export default function SettingsPage({ userData }) {
           </CardContent>
         </Card>
 
+        {/* Connexion boîte mail */}
         <Card>
           <CardHeader>
             <CardTitle>Connexion boîte mail</CardTitle>
@@ -131,14 +161,18 @@ export default function SettingsPage({ userData }) {
           </CardContent>
         </Card>
 
+        {/* Admin */}
         {isAdmin && (
           <Card>
             <CardHeader>
               <CardTitle>Administration</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p>Ici, l’admin peut gérer les utilisateurs, rôles, etc.</p>
-              {/* Tu peux ajouter des liens vers les pages admin */}
+            <CardContent className="space-y-4">
+              <p>Gérez vos utilisateurs et licences.</p>
+              <Button onClick={handleInviteUser}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Inviter un utilisateur
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -147,9 +181,8 @@ export default function SettingsPage({ userData }) {
   );
 }
 
-// Si tu veux précharger les données utilisateur (profil, rôle, etc.)
-export async function getServerSideProps(context) {
-  // Remplace ça par ton backend ou auth
+// Simule des données jusqu’à ce qu’on branche Supabase
+export async function getServerSideProps() {
   const userData = {
     fullName: "Lead Hunter",
     email: "leadhunterfr@gmail.com",
@@ -157,9 +190,9 @@ export async function getServerSideProps(context) {
     department: "",
     darkMode: false,
     role: "admin",
+    mailConnected: false,
+    mailAddress: "",
   };
 
-  return {
-    props: { userData },
-  };
+  return { props: { userData } };
 }
