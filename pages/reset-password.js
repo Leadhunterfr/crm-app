@@ -74,3 +74,6 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
+// ⛔️ Désactive le Layout (sidebar) pour cette page
+ResetPasswordPage.getLayout = (page) => page;
