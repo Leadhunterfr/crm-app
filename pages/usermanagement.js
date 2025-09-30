@@ -216,3 +216,66 @@ export default function UserManagementPage() {
             >
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm text-slate-500">{stat.label}</p>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    {stat.value}
+                  </h3>
+                </div>
+                {stat.icon}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Tableau des utilisateurs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Liste des utilisateurs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rôle</TableHead>
+                  <TableHead>Dernière connexion</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => {
+                  const roleIcon = getRoleIcon(user.role);
+                  const roleColor = getRoleColor(user.role);
+                  const lastSeen = getLastSeenStatus(user.last_seen);
+
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.full_name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge className={roleColor}>
+                          {React.createElement(roleIcon, { className: "w-3 h-3 mr-1" })}
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={lastSeen.color}>
+                        {React.createElement(lastSeen.icon, { className: "w-3 h-3 mr-1 inline" })}
+                        {lastSeen.text}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" onClick={() => handleViewUser(user)}>
+                          Voir
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
