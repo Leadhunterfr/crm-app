@@ -7,12 +7,34 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // TODO: Ici tu mets ton check login (API, Supabase, etc.)
-    console.log("Tentative login:", email, password);
-    router.push("/contacts"); // après connexion → contacts
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const { message } = await res.json();
+        throw new Error(message || "Identifiants incorrects");
+      }
+
+      // après connexion → contacts
+      router.push("/contacts");
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,18 +71,27 @@ export default function LoginPage() {
             />
           </div>
 
+          {/* Erreur */}
+          {error && (
+            <p className="text-sm text-red-500 text-center">{error}</p>
+          )}
+
           {/* Bouton connexion */}
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-medium transition-colors"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-medium transition-colors disabled:opacity-50"
           >
-            Se connecter
+            {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
 
         {/* Lien mot de passe oublié */}
         <div className="text-center mt-4">
-          <button className="text-sm text-slate-500 dark:text-slate-400 hover:underline">
+          <button
+            onClick={() => router.push("/reset-password")}
+            className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
+          >
             Mot de passe oublié ?
           </button>
         </div>
