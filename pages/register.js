@@ -120,3 +120,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+// ⛔️ Désactive le Layout (sidebar) pour cette page
+RegisterPage.getLayout = (page) => page;
+
