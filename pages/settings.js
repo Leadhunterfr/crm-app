@@ -1,202 +1,165 @@
 import React, { useState, useEffect } from "react";
-import { Rappel } from "@/entities/Rappel";
-import { Contact } from "@/entities/Contact";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { getSession, useSession } from "next-auth/react"; // si tu utilises next-auth
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  BellRing,
-  User,
-  Calendar,
-  Mail,
-  Phone,
-  Building2,
-} from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import ContactDetails from "../components/contacts/ContactDetails";
-import { AnimatePresence, motion } from "framer-motion";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch"; // si tu as un composant switch
+import { SignOut, Mail, Key } from "lucide-react";
+import { Core } from "@/integrations/Core"; // ou fonctions OAuth que tu vas créer
 
-export default function TachesPage() {
-  const [tasks, setTasks] = useState([]);
-  const [contactsData, setContactsData] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
+export default function SettingsPage({ userData }) {
+  // userData pourrait être chargé via getServerSideProps ou fetch dans useEffect
+  const [fullName, setFullName] = useState(userData?.fullName || "");
+  const [email, setEmail] = useState(userData?.email || "");
+  const [telephone, setTelephone] = useState(userData?.telephone || "");
+  const [department, setDepartment] = useState(userData?.department || "");
+  const [darkMode, setDarkMode] = useState(userData?.darkMode || false);
+  const [isAdmin, setIsAdmin] = useState(userData?.role === "admin");
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  const [mailConnected, setMailConnected] = useState(false);
+  const [mailAddress, setMailAddress] = useState("");
 
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const openTasks = await Rappel.filter({ completed: false }, "date_rappel");
-      setTasks(openTasks);
-
-      // Charger les données des contacts associés
-      const contactIds = [...new Set(openTasks.map((t) => t.contact_id))];
-      const contacts = await Contact.filter({ id: { $in: contactIds } });
-      const contactsMap = contacts.reduce((acc, contact) => {
-        acc[contact.id] = contact;
-        return acc;
-      }, {});
-      setContactsData(contactsMap);
-    } catch (error) {
-      console.error("Erreur lors du chargement des tâches :", error);
-    }
-    setLoading(false);
+  const handleSaveProfile = async () => {
+    // appelle ton API pour sauvegarder le profil
+    console.log("Sauvegarde profil", { fullName, email, telephone, department, darkMode });
+    // Exemple : await fetch("/api/user/update", { method: "POST", body: JSON.stringify(...) });
   };
 
-  const handleTaskCompletion = async (taskId, isCompleted) => {
-    try {
-      await Rappel.update(taskId, { completed: isCompleted });
-      setTasks(tasks.filter((t) => t.id !== taskId)); // remove de la liste
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour de la tâche :", error);
-    }
+  const handlePasswordReset = async () => {
+    // appelle ton API backend pour envoyer email de réinitialisation de mot de passe
+    console.log("Envoi lien réinitialisation mot de passe pour", email);
   };
 
-  const handleViewContact = (contact) => {
-    setSelectedContact(contact);
-    setShowDetails(true);
+  const handleConnectGmail = async () => {
+    // redirige vers l’URL OAuth Gmail / backend
+    // Exemple : window.location.href = "/api/oauth/google";
+    console.log("Connecter Gmail");
   };
 
-  const getTaskTypeIcon = (type) => {
-    const icons = {
-      Appel: <Phone className="w-4 h-4 text-blue-500" />,
-      Email: <Mail className="w-4 h-4 text-green-500" />,
-      Autre: <BellRing className="w-4 h-4 text-purple-500" />,
-    };
-    return icons[type] || icons["Autre"];
+  const handleConnectOutlook = async () => {
+    console.log("Connecter Outlook");
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        {/* Titre */}
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 flex items-center gap-3">
-          <BellRing className="w-8 h-8 text-blue-500" />
-          Mes Tâches
-        </h1>
+    <div className="p-6 bg-slate-100 dark:bg-slate-900 min-h-screen">
+      <div className="max-w-3xl mx-auto space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Mon profil</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="fullName">Nom complet</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled
+              />
+            </div>
+            <div>
+              <Label htmlFor="telephone">Téléphone</Label>
+              <Input
+                id="telephone"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="department">Département</Label>
+              <Input
+                id="department"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="darkMode">Mode sombre</Label>
+              <Switch
+                id="darkMode"
+                checked={darkMode}
+                onCheckedChange={(val) => setDarkMode(val)}
+              />
+            </div>
+            <div className="pt-4">
+              <Button onClick={handleSaveProfile}>Enregistrer</Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Loader */}
-        {loading ? (
-          <div className="space-y-4">
-            {Array(3)
-              .fill(0)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="animate-pulse h-20 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                />
-              ))}
-          </div>
-        ) : tasks.length === 0 ? (
-          /* Si aucune tâche */
-          <div className="text-center py-16">
-            <BellRing className="w-24 h-24 text-slate-300 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">
-              C'est tout bon !
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400">
-              Vous n’avez aucune tâche en attente.
-            </p>
-          </div>
-        ) : (
-          /* Liste des tâches */
-          <div className="space-y-4">
-            {tasks.map((task, index) => {
-              const contact = contactsData[task.contact_id];
-              return (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="bg-white dark:bg-slate-800 shadow-sm hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4 flex items-start gap-4">
-                      {/* Checkbox */}
-                      <div className="flex items-center pt-1">
-                        <Checkbox
-                          id={`task-${task.id}`}
-                          onCheckedChange={(checked) =>
-                            handleTaskCompletion(task.id, checked)
-                          }
-                        />
-                      </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Mot de passe</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>Cliquez ci-dessous pour réinitialiser votre mot de passe.</p>
+            <Button onClick={handlePasswordReset} variant="outline">
+              <Key className="w-4 h-4 mr-2" />
+              Réinitialiser le mot de passe
+            </Button>
+          </CardContent>
+        </Card>
 
-                      {/* Infos tâche */}
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-2">
-                            {getTaskTypeIcon(task.type)}
-                            <span className="font-medium">{task.type}</span>
-                            <Badge variant="outline">
-                              {format(new Date(task.date_rappel), "dd MMM yyyy à HH:mm", {
-                                locale: fr,
-                              })}
-                            </Badge>
-                          </div>
-                          {contact && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewContact(contact)}
-                            >
-                              <User className="w-4 h-4 mr-1" />
-                              Voir contact
-                            </Button>
-                          )}
-                        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Connexion boîte mail</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {mailConnected ? (
+              <p>Connecté à : {mailAddress}</p>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                <Button onClick={handleConnectGmail}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Connecter Gmail
+                </Button>
+                <Button onClick={handleConnectOutlook}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Connecter Outlook
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                        <p className="my-2 text-slate-800 dark:text-slate-200">
-                          {task.note}
-                        </p>
-
-                        {/* Infos contact */}
-                        {contact && (
-                          <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-6">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              <span>
-                                {contact.prenom} {contact.nom}
-                              </span>
-                            </div>
-                            {contact.societe && (
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4" />
-                                <span>{contact.societe}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Administration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Ici, l’admin peut gérer les utilisateurs, rôles, etc.</p>
+              {/* Tu peux ajouter des liens vers les pages admin */}
+            </CardContent>
+          </Card>
         )}
       </div>
-
-      {/* Modal Contact */}
-      <AnimatePresence>
-        {showDetails && selectedContact && (
-          <ContactDetails
-            contact={selectedContact}
-            onClose={() => {
-              setShowDetails(false);
-              setSelectedContact(null);
-            }}
-            onEdit={() => setShowDetails(false)}
-            onDelete={() => setShowDetails(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
+}
+
+// Si tu veux précharger les données utilisateur (profil, rôle, etc.)
+export async function getServerSideProps(context) {
+  // Remplace ça par ton backend ou auth
+  const userData = {
+    fullName: "Lead Hunter",
+    email: "leadhunterfr@gmail.com",
+    telephone: "",
+    department: "",
+    darkMode: false,
+    role: "admin",
+  };
+
+  return {
+    props: { userData },
+  };
 }
