@@ -92,3 +92,6 @@ export default function LoginPage() {
     </div>
   );
 }
+
+// ⛔️ Désactive le Layout (sidebar) pour cette page
+LoginPage.getLayout = (page) => page;
