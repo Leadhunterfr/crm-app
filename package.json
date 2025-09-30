@@ -15,7 +15,7 @@
     "@hello-pangea/dnd": "^16.6.0",
     "@supabase/supabase-js": "^2.45.0",
     "googleapis": "^144.0.0",
-    "@radix-ui/react-switch": "^1.0.3"
+    "@radix-ui/react-switch": "^1.0.3",
     "lucide-react": "^0.308.0",
     "framer-motion": "^10.12.16",
     "date-fns": "^2.30.0",
