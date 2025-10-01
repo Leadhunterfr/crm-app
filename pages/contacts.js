@@ -1,12 +1,8 @@
-// pages/contacts.js
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient"; // ✅ connexion Supabase
+import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Upload } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-
-// Composants spécifiques
 import EnhancedContactTable from "@/components/contacts/EnhancedContactTable";
 import ContactForm from "@/components/contacts/ContactForm";
 import ContactDetails from "@/components/contacts/ContactDetails";
@@ -14,6 +10,7 @@ import ContactFilters from "@/components/contacts/ContactFilters";
 import ImportExportDialog from "@/components/contacts/ImportExportDialog";
 import ColumnManager from "@/components/contacts/ColumnManager";
 import ChatSidebar from "@/components/contacts/ChatSidebar";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Colonnes par défaut
 const DEFAULT_COLUMNS = [
@@ -29,7 +26,6 @@ const DEFAULT_COLUMNS = [
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
-  const [filteredContacts, setFilteredContacts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // UI state
@@ -57,80 +53,46 @@ export default function ContactsPage() {
   const loadContacts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("contacts")
         .select("*")
         .order("updated_date", { ascending: false });
 
+      if (filters.statut !== "tous") {
+        query = query.eq("statut", filters.statut);
+      }
+      if (filters.source !== "tous") {
+        query = query.eq("source", filters.source);
+      }
+      if (searchQuery) {
+        query = query.or(
+          `prenom.ilike.%${searchQuery}%,nom.ilike.%${searchQuery}%,societe.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`
+        );
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setContacts(data || []);
     } catch (error) {
-      console.error("Erreur lors du chargement des contacts:", error);
+      console.error("Erreur chargement contacts:", error);
     }
     setLoading(false);
   };
 
-  // 🔹 Filtrage des contacts
-  const applyFilters = React.useCallback(() => {
-    let filtered = [...contacts];
-
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (c) =>
-          `${c.prenom || ""} ${c.nom || ""}`
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          c.societe?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (filters.statut !== "tous") {
-      filtered = filtered.filter((c) => c.statut === filters.statut);
-    }
-
-    if (filters.source !== "tous") {
-      filtered = filtered.filter((c) => c.source === filters.source);
-    }
-
-    setFilteredContacts(filtered);
-  }, [contacts, searchQuery, filters]);
-
   useEffect(() => {
     loadContacts();
-  }, []);
+  }, [filters, searchQuery]); // recharger à chaque changement de filtre ou recherche
 
-  useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
-
-  // 🔹 CRUD Supabase
+  // 🔹 Handlers CRUD
   const handleCreateContact = async (contactData) => {
     try {
       const { data, error } = await supabase
         .from("contacts")
-        .insert([
-          {
-            ...contactData,
-            updated_date: new Date().toISOString(),
-          },
-        ])
+        .insert([{ ...contactData }])
         .select()
         .single();
 
       if (error) throw error;
-
-      // Créer une interaction liée
-      await supabase.from("interactions").insert([
-        {
-          contact_id: data.id,
-          type: "Note",
-          description: "Contact créé",
-          date_interaction: new Date().toISOString(),
-          org_id: data.org_id,
-        },
-      ]);
-
       setContacts([data, ...contacts]);
       setShowContactForm(false);
     } catch (error) {
@@ -140,20 +102,16 @@ export default function ContactsPage() {
 
   const handleUpdateContact = async (contactId, updates) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contacts")
-        .update({
-          ...updates,
-          updated_date: new Date().toISOString(),
-        })
-        .eq("id", contactId);
+        .update(updates)
+        .eq("id", contactId)
+        .select()
+        .single();
 
       if (error) throw error;
-
       setContacts(
-        contacts.map((c) =>
-          c.id === contactId ? { ...c, ...updates } : c
-        )
+        contacts.map((c) => (c.id === contactId ? { ...c, ...data } : c))
       );
       setEditingContact(null);
     } catch (error) {
@@ -168,9 +126,7 @@ export default function ContactsPage() {
           .from("contacts")
           .delete()
           .eq("id", contactId);
-
         if (error) throw error;
-
         setContacts(contacts.filter((c) => c.id !== contactId));
       } catch (error) {
         console.error("Erreur suppression:", error);
@@ -223,7 +179,7 @@ export default function ContactsPage() {
         {/* Tableau */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border">
           <EnhancedContactTable
-            contacts={filteredContacts}
+            contacts={contacts}
             loading={loading}
             onView={(contact) => {
               setSelectedContact(contact);
@@ -274,7 +230,7 @@ export default function ContactsPage() {
         {showImportExport && (
           <ImportExportDialog
             onClose={() => setShowImportExport(false)}
-            contacts={filteredContacts}
+            contacts={contacts}
             onImportComplete={loadContacts}
           />
         )}
@@ -283,10 +239,7 @@ export default function ContactsPage() {
             columns={columns}
             onColumnsChange={(cols) => {
               setColumns(cols);
-              localStorage.setItem(
-                "contacts-columns",
-                JSON.stringify(cols)
-              );
+              localStorage.setItem("contacts-columns", JSON.stringify(cols));
             }}
             onClose={() => setShowColumnManager(false)}
           />
