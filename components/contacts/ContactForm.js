@@ -101,7 +101,7 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
       const { data: profile, error: profErr } = await supabase
         .from("user_profiles")
         .select("org_id")
-        .eq("user_id", user.id)   // 👈 corriger ici
+        .eq("id", user.id)   // 👈 corriger ici
         .maybeSingle();           // 👈 evite l'erreur si pas trouvé
       
       if (profErr) throw profErr;
