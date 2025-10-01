@@ -12,6 +12,7 @@ import ColumnManager from "@/components/contacts/ColumnManager";
 import ChatSidebar from "@/components/contacts/ChatSidebar";
 import { motion, AnimatePresence } from "framer-motion";
 
+
 // Colonnes par défaut
 const DEFAULT_COLUMNS = [
   { id: "prenom", label: "Prénom", visible: true, width: "150px" },
