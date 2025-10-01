@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         full_name: fullName,
         telephone,
         department,
-        darkMode,
+        dark_mode: darkMode,
       })
       .eq("id", user.id);
 
