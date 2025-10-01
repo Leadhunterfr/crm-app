@@ -210,6 +210,7 @@ export default function ContactsPage() {
         {editingContact && (
           <ContactForm
             contact={editingContact ?? null}    // null = créatuibn objet = édition
+            open={showContactForm}
             onClose={() => {
               setShowContactForm(false);
               setEditingContact(null);
