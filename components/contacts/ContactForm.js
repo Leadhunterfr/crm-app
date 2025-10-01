@@ -47,7 +47,7 @@ const TemperatureSelector = ({ value, onChange }) => {
   );
 };
 
-export default function ContactForm({ contact, onClose, onSaved }) {
+export default function ContactForm({ contact, open, onClose, onSaved }) {
   const [formData, setFormData] = useState({
     prenom:  contact?.prenom  || "",
     nom:     contact?.nom     || "",
@@ -158,7 +158,7 @@ export default function ContactForm({ contact, onClose, onSaved }) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose?.(); }}>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) onClose?.(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
