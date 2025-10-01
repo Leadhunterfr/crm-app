@@ -56,7 +56,7 @@ export default function ContactsPage() {
       let query = supabase
         .from("contacts")
         .select("*")
-        .order("updated_date", { ascending: false });
+        .order("updated_at", { ascending: false });
 
       if (filters.statut !== "tous") {
         query = query.eq("statut", filters.statut);
@@ -202,8 +202,17 @@ export default function ContactsPage() {
       <AnimatePresence>
         {showContactForm && (
           <ContactForm
-            onClose={() => setShowContactForm(false)}
-            onSave={handleCreateContact}
+            onClose={() => setShowForm(false)}
+            onSave={async (formData) => {
+              try {
+                const { error } = await supabase.from("contacts").insert([formData]);
+                if (error) throw error;
+                setShowForm(false);
+                loadContacts(); // 🔄 recharge la liste
+              } catch (e) {
+                console.error("Erreur création contact:", e);
+               }
+            }}
           />
         )}
         {editingContact && (
