@@ -2,51 +2,58 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export default async function handler(req, res) {
-  if (req.method === "POST") {
-    const { token, full_name, password } = req.body;
-
-    try {
-      // Vérifier l’invitation
-      const { data: invitation, error: inviteError } = await supabase
-        .from("invitations")
-        .select("*")
-        .eq("id", token)
-        .eq("accepted", false)
-        .single();
-
-      if (inviteError || !invitation) {
-        return res.status(400).json({ message: "Invitation invalide ou déjà utilisée." });
-      }
-
-      // Créer l’utilisateur dans Supabase Auth
-      const { data: authUser, error: authError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      // Créer son profil lié à l’org
-      const { error: profileError } = await supabase.from("user_profiles").insert([{
-        id: authUser.user.id,
-        full_name,
-        email: invitation.email,
-        role: invitation.role,
-        org_id: invitation.org_id,
-      }]);
-
-      if (profileError) throw profileError;
-
-      // Marquer l’invitation comme acceptée
-      await supabase.from("invitations").update({ accepted: true }).eq("id", token);
-
-      return res.status(200).json({ message: "Invitation acceptée. Compte créé." });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ message: err.message });
-    }
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Méthode non autorisée" });
   }
 
-  res.setHeader("Allow", ["POST"]);
-  res.status(405).end(`Method ${req.method} Not Allowed`);
+  const { token, full_name, password } = req.body;
+
+  if (!token || !full_name || !password) {
+    return res.status(400).json({ message: "Champs manquants" });
+  }
+
+  try {
+    // Vérifier l'invitation
+    const { data: invite, error: inviteError } = await supabase
+      .from("invitations")
+      .select("*")
+      .eq("id", token)
+      .eq("accepted", false)
+      .single();
+
+    if (inviteError || !invite) {
+      return res.status(400).json({ message: "Invitation invalide ou déjà utilisée" });
+    }
+
+    // Créer l'utilisateur dans Supabase Auth
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email: invite.email,
+      password,
+      email_confirm: true,
+    });
+
+    if (createError) throw createError;
+
+    // Créer le profil lié
+    const { error: profileError } = await supabase.from("user_profiles").insert({
+      id: newUser.user.id,
+      full_name,
+      email: invite.email,
+      role: invite.role,
+      org_id: invite.org_id,
+    });
+
+    if (profileError) throw profileError;
+
+    // Marquer l'invitation comme acceptée
+    await supabase
+      .from("invitations")
+      .update({ accepted: true })
+      .eq("id", token);
+
+    return res.status(200).json({ message: "Invitation acceptée ✅" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
 }
