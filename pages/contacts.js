@@ -202,12 +202,12 @@ export default function ContactsPage() {
       <AnimatePresence>
         {showContactForm && (
           <ContactForm
-            onClose={() => setShowForm(false)}
-            onSave={async (formData) => {
+            onClose={() => (false)}
+            onSaved={loadContacts} // recharge les contacts après création
               try {
                 const { error } = await supabase.from("contacts").insert([formData]);
                 if (error) throw error;
-                setShowForm(false);
+                setShowContactForm(false);
                 loadContacts(); // 🔄 recharge la liste
               } catch (e) {
                 console.error("Erreur création contact:", e);
@@ -219,7 +219,7 @@ export default function ContactsPage() {
           <ContactForm
             contact={editingContact}
             onClose={() => setEditingContact(null)}
-            onSave={(data) => handleUpdateContact(editingContact.id, data)}
+            onSaved={loadContacts} // recharge les contacts après update
           />
         )}
         {selectedContact && showContactDetails && (
