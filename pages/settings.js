@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
