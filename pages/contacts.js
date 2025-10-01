@@ -209,8 +209,11 @@ export default function ContactsPage() {
         )}
         {editingContact && (
           <ContactForm
-            contact={editingContact}
-            onClose={() => setEditingContact(null)}
+            contact={editingContact ?? null}    // null = créatuibn objet = édition
+            onClose={() => {
+              setShowContactForm(false);
+              setEditingContact(null);
+              }}
             onSaved={loadContacts} // recharge les contacts après update
           />
         )}
