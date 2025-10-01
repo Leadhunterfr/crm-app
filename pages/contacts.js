@@ -205,15 +205,6 @@ export default function ContactsPage() {
           <ContactForm
             onClose={() => (false)}
             onSaved={loadContacts} // recharge les contacts après création
-              try {
-                const { error } = await supabase.from("contacts").insert([formData]);
-                if (error) throw error;
-                setShowContactForm(false);
-                loadContacts(); // 🔄 recharge la liste
-              } catch (e) {
-                console.error("Erreur création contact:", e);
-               }
-            }}
           />
         )}
         {editingContact && (
