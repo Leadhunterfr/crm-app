@@ -96,7 +96,7 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
       const { data: auth } = await supabase.auth.getUser();
       const user = auth?.user;
       if (!user) throw new Error("Utilisateur non authentifié.");
-
+  
       // 2) org_id du user (nécessaire pour RLS on contacts)
       const { data: profile, error: profErr } = await supabase
         .from("user_profiles")
@@ -106,8 +106,8 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
       if (profErr) throw profErr;
       const org_id = profile?.org_id;
       if (!org_id) throw new Error("Impossible de récupérer votre organisation.");
-
-      // 3) payload filtré (évite d'envoyer des champs inconnus)
+  
+      // 3) payload filtré et nettoyé
       const payload = {
         prenom: formData.prenom || null,
         nom: formData.nom || null,
@@ -127,26 +127,29 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
             : Number(formData.valeur_estimee),
         temperature: formData.temperature || null,
         methode_contact_preferee: formData.methode_contact_preferee || null,
-        date_cloture_prevue: formData.date_cloture_prevue || null,
+        date_cloture_prevue:
+          formData.date_cloture_prevue && formData.date_cloture_prevue.trim() !== ""
+            ? formData.date_cloture_prevue
+            : null, // ✅ vide → null
         tags: formData.tags?.length ? formData.tags : null, // nécessite text[] ou jsonb en base
       };
-
+  
       if (contact?.id) {
         // UPDATE
         const { error } = await supabase
           .from("contacts")
           .update(payload)
           .eq("id", contact.id)
-          .eq("org_id", org_id); // sécurise
+          .eq("org_id", org_id);
         if (error) throw error;
       } else {
-        // INSERT (ajout org_id impératif pour RLS)
+        // INSERT
         const { error } = await supabase
           .from("contacts")
           .insert([{ ...payload, org_id }]);
         if (error) throw error;
       }
-
+  
       onSaved?.();
       onClose?.();
     } catch (err) {
@@ -156,6 +159,7 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
       setSaving(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) onClose?.(); }}>
