@@ -101,12 +101,13 @@ export default function ContactForm({ contact, open, onClose, onSaved }) {
       const { data: profile, error: profErr } = await supabase
         .from("user_profiles")
         .select("org_id")
-        .eq("id", user.id)
-        .single();
+        .eq("user_id", user.id)   // 👈 corriger ici
+        .maybeSingle();           // 👈 evite l'erreur si pas trouvé
+      
       if (profErr) throw profErr;
       const org_id = profile?.org_id;
       if (!org_id) throw new Error("Impossible de récupérer votre organisation.");
-  
+
       // 3) payload filtré et nettoyé
       const payload = {
         prenom: formData.prenom || null,
