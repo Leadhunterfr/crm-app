@@ -203,21 +203,24 @@ export default function ContactsPage() {
       <AnimatePresence>
         {showContactForm && (
           <ContactForm
-            onClose={() => (false)}
+            open={showContactForm}
+            contact={null} // création
+            onClose={() => setShowContactForm(false)}
             onSaved={loadContacts} // recharge les contacts après création
           />
         )}
         {editingContact && (
           <ContactForm
-            contact={editingContact ?? null}    // null = créatuibn objet = édition
-            open={showContactForm}
+            open={true} // forcé ouvert
+            contact={editingContact}
             onClose={() => {
               setShowContactForm(false);
               setEditingContact(null);
-              }}
-            onSaved={loadContacts} // recharge les contacts après update
+            }}
+            onSaved={loadContacts}
           />
         )}
+
         {selectedContact && showContactDetails && (
           <ContactDetails
             contact={selectedContact}
