@@ -1,5 +1,5 @@
 // pages/settings.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@supabase/auth-helpers-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -10,22 +10,24 @@ import { Switch } from "@/components/ui/switch";
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
-  const user = useUser(); // ✅ récupère la session directement
-  const [userData, setUserData] = useState(user ? {
-    email: user.email,
-    full_name: user.user_metadata?.full_name || "",
-    telephone: user.user_metadata?.telephone || "",
-    department: user.user_metadata?.department || "",
-    dark_mode: user.user_metadata?.dark_mode || false,
-  } : null);
+  const user = useUser();
+  const [userData, setUserData] = useState(null);
 
-  if (!user) return <p>Non authentifié</p>;
+  // Met à jour userData quand `user` est dispo
+  useEffect(() => {
+    if (user) {
+      setUserData({
+        email: user.email,
+        full_name: user.user_metadata?.full_name || "",
+        telephone: user.user_metadata?.telephone || "",
+        department: user.user_metadata?.department || "",
+        dark_mode: user.user_metadata?.dark_mode || false,
+      });
+    }
+  }, [user]);
 
-  setUserData({
-    email: user.email,
-    full_name: user.user_metadata?.full_name || "",
-    ...
-  });
+  if (!user) return <p className="p-6">Non authentifié</p>;
+  if (!userData) return <p className="p-6">Chargement...</p>;
 
   const handleSaveProfile = async () => {
     try {
@@ -55,7 +57,9 @@ export default function SettingsPage() {
               <Input
                 id="fullName"
                 value={userData.full_name}
-                onChange={(e) => setUserData({ ...userData, full_name: e.target.value })}
+                onChange={(e) =>
+                  setUserData({ ...userData, full_name: e.target.value })
+                }
               />
             </div>
             <div>
@@ -67,7 +71,9 @@ export default function SettingsPage() {
               <Input
                 id="telephone"
                 value={userData.telephone}
-                onChange={(e) => setUserData({ ...userData, telephone: e.target.value })}
+                onChange={(e) =>
+                  setUserData({ ...userData, telephone: e.target.value })
+                }
               />
             </div>
             <div>
@@ -75,7 +81,9 @@ export default function SettingsPage() {
               <Input
                 id="department"
                 value={userData.department}
-                onChange={(e) => setUserData({ ...userData, department: e.target.value })}
+                onChange={(e) =>
+                  setUserData({ ...userData, department: e.target.value })
+                }
               />
             </div>
             <div className="flex items-center space-x-2">
@@ -83,7 +91,9 @@ export default function SettingsPage() {
               <Switch
                 id="darkMode"
                 checked={userData.dark_mode}
-                onCheckedChange={(val) => setUserData({ ...userData, dark_mode: val })}
+                onCheckedChange={(val) =>
+                  setUserData({ ...userData, dark_mode: val })
+                }
               />
             </div>
             <div className="pt-4">
