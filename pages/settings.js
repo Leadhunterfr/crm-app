@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+export const dynamic = "force-dynamic";
+
 export default function SettingsPage() {
-  const { user } = useUser(); // ✅ récupère la session directement
+  const user = useUser(); // ✅ récupère la session directement
   const [userData, setUserData] = useState(user ? {
     email: user.email,
     full_name: user.user_metadata?.full_name || "",
@@ -17,9 +19,13 @@ export default function SettingsPage() {
     dark_mode: user.user_metadata?.dark_mode || false,
   } : null);
 
-  if (!user) {
-    return <p className="p-6">Non authentifié</p>;
-  }
+  if (!user) return <p>Non authentifié</p>;
+
+  setUserData({
+    email: user.email,
+    full_name: user.user_metadata?.full_name || "",
+    ...
+  });
 
   const handleSaveProfile = async () => {
     try {
