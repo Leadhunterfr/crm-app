@@ -1,47 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabaseClient"; // ✅ Connexion Supabase
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  X,
-  MessageSquare,
-  Phone,
-  Mail,
-  Linkedin,
-  Calendar,
-  Plus,
-  Send,
-  Bell,
-  Clock
+import { 
+  X, MessageSquare, Phone, Mail, Linkedin, Calendar, 
+  Send, Bell, Clock 
 } from "lucide-react";
-import { Interaction } from "@/entities/Interaction";
-import { Rappel } from "@/entities/Rappel";
-import { User } from "@/entities/User";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 
 const interactionTypes = [
   { value: "Appel", label: "Appel téléphonique", icon: Phone },
   { value: "Email", label: "Email", icon: Mail },
   { value: "LinkedIn", label: "Message LinkedIn", icon: Linkedin },
-  { value: "Note", label: "Note générale", icon: MessageSquare }
+  { value: "Note", label: "Note générale", icon: MessageSquare },
 ];
 
 const rappelTypes = [
   { value: "Appel", label: "Rappel d'appel", icon: Phone },
   { value: "Email", label: "Rappel email", icon: Mail },
-  { value: "Autre", label: "Autre rappel", icon: Bell }
+  { value: "Autre", label: "Autre rappel", icon: Bell },
 ];
 
 export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
@@ -49,12 +28,12 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
   const [newInteraction, setNewInteraction] = useState({
     type: "Note",
     description: "",
-    date_interaction: new Date().toISOString().slice(0, 16)
+    date_interaction: new Date().toISOString().slice(0, 16),
   });
   const [newRappel, setNewRappel] = useState({
     type: "Appel",
     date_rappel: new Date().toISOString().slice(0, 16),
-    note: ""
+    note: "",
   });
   const [currentUser, setCurrentUser] = useState(null);
   const [sending, setSending] = useState(false);
@@ -65,10 +44,11 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
 
   const loadCurrentUser = async () => {
     try {
-      const user = await User.me();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
       setCurrentUser(user);
     } catch (error) {
-      console.error("Erreur lors du chargement de l'utilisateur:", error);
+      console.error("Erreur chargement utilisateur:", error);
     }
   };
 
@@ -78,27 +58,24 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
 
     setSending(true);
     try {
-      const interactionData = {
+      const { error } = await supabase.from("interactions").insert([{
         contact_id: contact.id,
         type: newInteraction.type,
         description: newInteraction.description,
         date_interaction: new Date(newInteraction.date_interaction).toISOString(),
-        created_by_user_name: currentUser?.full_name
-      };
+        created_by_user_id: currentUser?.id,
+      }]);
+      if (error) throw error;
 
-      await Interaction.create(interactionData);
-      
       setNewInteraction({
         type: "Note",
         description: "",
-        date_interaction: new Date().toISOString().slice(0, 16)
+        date_interaction: new Date().toISOString().slice(0, 16),
       });
 
-      if (onInteractionAdded) {
-        onInteractionAdded();
-      }
+      if (onInteractionAdded) onInteractionAdded();
     } catch (error) {
-      console.error("Erreur lors de l'ajout de l'interaction:", error);
+      console.error("Erreur ajout interaction:", error);
     }
     setSending(false);
   };
@@ -109,28 +86,24 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
 
     setSending(true);
     try {
-      await Rappel.create({
+      const { error } = await supabase.from("rappels").insert([{
         contact_id: contact.id,
         user_id: currentUser?.id,
         type: newRappel.type,
         date_rappel: new Date(newRappel.date_rappel).toISOString(),
-        note: newRappel.note
-      });
+        note: newRappel.note,
+      }]);
+      if (error) throw error;
 
       setNewRappel({
         type: "Appel",
         date_rappel: new Date().toISOString().slice(0, 16),
-        note: ""
+        note: "",
       });
     } catch (error) {
-      console.error("Erreur lors de l'ajout du rappel:", error);
+      console.error("Erreur ajout rappel:", error);
     }
     setSending(false);
-  };
-
-  const getInteractionIcon = (type) => {
-    const typeObj = interactionTypes.find(t => t.value === type);
-    return typeObj ? typeObj.icon : MessageSquare;
   };
 
   return (
@@ -187,55 +160,51 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
       <div className="flex-1 overflow-y-auto">
         {activeTab === "interactions" && (
           <div className="p-4 space-y-4">
-            <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
-              Ajouter une interaction
-            </h4>
-            
+            <h4 className="font-medium mb-3">Ajouter une interaction</h4>
             <form onSubmit={handleAddInteraction} className="space-y-4">
               <div className="space-y-2">
                 <Label>Type d'interaction</Label>
-                <Select
+                <select
+                  className="w-full border rounded-md p-2"
                   value={newInteraction.type}
-                  onValueChange={(value) => setNewInteraction(prev => ({ ...prev, type: value }))}
+                  onChange={(e) =>
+                    setNewInteraction((prev) => ({ ...prev, type: e.target.value }))
+                  }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {interactionTypes.map(type => {
-                      const Icon = type.icon;
-                      return (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4" />
-                            {type.label}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                  {interactionTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-
               <div className="space-y-2">
                 <Label>Date et heure</Label>
                 <Input
                   type="datetime-local"
                   value={newInteraction.date_interaction}
-                  onChange={(e) => setNewInteraction(prev => ({ ...prev, date_interaction: e.target.value }))}
+                  onChange={(e) =>
+                    setNewInteraction((prev) => ({
+                      ...prev,
+                      date_interaction: e.target.value,
+                    }))
+                  }
                 />
               </div>
-
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea
                   value={newInteraction.description}
-                  onChange={(e) => setNewInteraction(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setNewInteraction((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="Que s'est-il passé lors de cette interaction ?"
                   rows={3}
                 />
               </div>
-
               <Button type="submit" disabled={sending || !newInteraction.description.trim()} className="w-full">
                 <Send className="w-4 h-4 mr-2" />
                 {sending ? "Enregistrement..." : "Ajouter l'interaction"}
@@ -246,55 +215,48 @@ export default function ChatSidebar({ contact, onClose, onInteractionAdded }) {
 
         {activeTab === "rappels" && (
           <div className="p-4 space-y-4">
-            <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
-              Planifier une tâche
-            </h4>
-            
+            <h4 className="font-medium mb-3">Planifier une tâche</h4>
             <form onSubmit={handleAddRappel} className="space-y-4">
               <div className="space-y-2">
                 <Label>Type de rappel</Label>
-                <Select
+                <select
+                  className="w-full border rounded-md p-2"
                   value={newRappel.type}
-                  onValueChange={(value) => setNewRappel(prev => ({ ...prev, type: value }))}
+                  onChange={(e) =>
+                    setNewRappel((prev) => ({ ...prev, type: e.target.value }))
+                  }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rappelTypes.map(type => {
-                      const Icon = type.icon;
-                      return (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4" />
-                            {type.label}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                  {rappelTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-
               <div className="space-y-2">
-                <Label>Date et heure du rappel</Label>
+                <Label>Date et heure</Label>
                 <Input
                   type="datetime-local"
                   value={newRappel.date_rappel}
-                  onChange={(e) => setNewRappel(prev => ({ ...prev, date_rappel: e.target.value }))}
+                  onChange={(e) =>
+                    setNewRappel((prev) => ({
+                      ...prev,
+                      date_rappel: e.target.value,
+                    }))
+                  }
                 />
               </div>
-
               <div className="space-y-2">
                 <Label>Note</Label>
                 <Textarea
                   value={newRappel.note}
-                  onChange={(e) => setNewRappel(prev => ({ ...prev, note: e.target.value }))}
+                  onChange={(e) =>
+                    setNewRappel((prev) => ({ ...prev, note: e.target.value }))
+                  }
                   placeholder="Que devez-vous faire ou vous rappeler ?"
                   rows={3}
                 />
               </div>
-
               <Button type="submit" disabled={sending || !newRappel.note.trim()} className="w-full">
                 <Clock className="w-4 h-4 mr-2" />
                 {sending ? "Enregistrement..." : "Planifier la tâche"}
