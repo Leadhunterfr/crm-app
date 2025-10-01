@@ -11,12 +11,6 @@ export default function Layout({ children }) {
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-          >
-            <Home className="w-5 h-5" /> Dashboard
-          </Link>
-          <Link
             href="/contacts"
             className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
           >
@@ -33,16 +27,17 @@ export default function Layout({ children }) {
             className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
           >
             <Shield className="w-5 h-5" /> Utilisateurs
-          </Link>
+          </Link>          
+        </nav>
+
+        {/* Réglages en bas */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
           <Link
             href="/settings"
             className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
           >
-            <Shield className="w-5 h-5" /> Réglages
+            <Settings className="w-5 h-5" /> Réglages
           </Link>
-        </nav>
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-sm text-slate-500">
-          © 2025 CRM
         </div>
       </aside>
 
