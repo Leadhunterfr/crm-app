@@ -1,8 +1,11 @@
 // pages/api/user/me.js
-import { supabase } from "@/lib/supabaseClient";
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
 export default async function handler(req, res) {
   try {
+    const supabase = createServerSupabaseClient({ req, res });
+
+    // ✅ Récupération de l'utilisateur connecté depuis les cookies
     const {
       data: { user },
       error: userError,
@@ -12,7 +15,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: "Non authentifié" });
     }
 
-    // Récupérer les infos dans user_profiles
+    // ✅ Charger son profil dans user_profiles
     const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
