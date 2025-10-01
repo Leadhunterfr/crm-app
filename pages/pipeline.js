@@ -1,14 +1,12 @@
+// pages/pipeline.js
 import React, { useState, useEffect, useCallback } from "react";
-import { Contact } from "@/entities/Contact";
-import { Interaction } from "@/entities/Interaction";
+import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Plus,
-  Mail,
-  Building2,
   DollarSign,
   TrendingUp,
   Eye,
@@ -71,12 +69,17 @@ export default function PipelinePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [temperatureFilter, setTemperatureFilter] = useState("tous");
 
-  // 🔹 Charger contacts
+  // 🔹 Charger contacts depuis Supabase
   const loadContacts = async () => {
     setLoading(true);
     try {
-      const data = await Contact.list("-updated_date");
-      setContacts(data);
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+      setContacts(data || []);
     } catch (error) {
       console.error("Erreur chargement contacts:", error);
     }
@@ -87,7 +90,7 @@ export default function PipelinePage() {
     loadContacts();
   }, []);
 
-  // 🔹 Filtrage
+  // 🔹 Filtrage local
   const applyFilters = useCallback(() => {
     let filtered = [...contacts];
 
@@ -126,23 +129,33 @@ export default function PipelinePage() {
     updateStageCounts();
   }, [updateStageCounts]);
 
-  // 🔹 Changer statut
+  // 🔹 Changer statut + créer interaction
   const handleStatusChange = async (contactId, newStatus) => {
     try {
       const contact = contacts.find((c) => c.id === contactId);
       if (!contact) return;
 
-      await Contact.update(contactId, {
-        statut: newStatus,
-        derniere_interaction: new Date().toISOString(),
-      });
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({
+          statut: newStatus,
+          derniere_interaction: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contactId);
 
-      await Interaction.create({
-        contact_id: contactId,
-        type: "Modification",
-        description: `Contact déplacé de "${contact.statut}" vers "${newStatus}"`,
-        date_interaction: new Date().toISOString(),
-      });
+      if (updateError) throw updateError;
+
+      const { error: insertError } = await supabase.from("interactions").insert([
+        {
+          contact_id: contactId,
+          type: "Modification",
+          description: `Contact déplacé de "${contact.statut}" vers "${newStatus}"`,
+          date_interaction: new Date().toISOString(),
+        },
+      ]);
+
+      if (insertError) throw insertError;
 
       setContacts(
         contacts.map((c) =>
@@ -215,7 +228,10 @@ export default function PipelinePage() {
           </div>
           <div className="flex items-center gap-3">
             <Filter className="w-4 h-4 text-slate-500" />
-            <Select value={temperatureFilter} onValueChange={setTemperatureFilter}>
+            <Select
+              value={temperatureFilter}
+              onValueChange={setTemperatureFilter}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Température" />
               </SelectTrigger>
