@@ -1,10 +1,9 @@
+// pages/contacts.js
 import React, { useState, useEffect } from "react";
-import { Contact } from "@/entities/Contact";
-import { Interaction } from "@/entities/Interaction";
+import { supabase } from "@/lib/supabaseClient"; // ✅ connexion Supabase
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Upload } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Composants spécifiques
@@ -48,16 +47,23 @@ export default function ContactsPage() {
 
   // Colonnes visibles
   const [columns, setColumns] = useState(() => {
-    const saved = typeof window !== "undefined" && localStorage.getItem("contacts-columns");
+    const saved =
+      typeof window !== "undefined" &&
+      localStorage.getItem("contacts-columns");
     return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
   });
 
-  // 🔹 Charger les contacts
+  // 🔹 Charger les contacts depuis Supabase
   const loadContacts = async () => {
     setLoading(true);
     try {
-      const data = await Contact.list("-updated_date");
-      setContacts(data);
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .order("updated_date", { ascending: false });
+
+      if (error) throw error;
+      setContacts(data || []);
     } catch (error) {
       console.error("Erreur lors du chargement des contacts:", error);
     }
@@ -69,10 +75,13 @@ export default function ContactsPage() {
     let filtered = [...contacts];
 
     if (searchQuery) {
-      filtered = filtered.filter((c) =>
-        `${c.prenom || ""} ${c.nom || ""}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.societe?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (c) =>
+          `${c.prenom || ""} ${c.nom || ""}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          c.societe?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.email?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -95,22 +104,34 @@ export default function ContactsPage() {
     applyFilters();
   }, [applyFilters]);
 
-  // 🔹 Handlers CRUD
+  // 🔹 CRUD Supabase
   const handleCreateContact = async (contactData) => {
     try {
-      const newContact = await Contact.create({
-        ...contactData,
-        derniere_interaction: new Date().toISOString(),
-      });
+      const { data, error } = await supabase
+        .from("contacts")
+        .insert([
+          {
+            ...contactData,
+            updated_date: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
 
-      await Interaction.create({
-        contact_id: newContact.id,
-        type: "Note",
-        description: "Contact créé",
-        date_interaction: new Date().toISOString(),
-      });
+      if (error) throw error;
 
-      setContacts([newContact, ...contacts]);
+      // Créer une interaction liée
+      await supabase.from("interactions").insert([
+        {
+          contact_id: data.id,
+          type: "Note",
+          description: "Contact créé",
+          date_interaction: new Date().toISOString(),
+          org_id: data.org_id,
+        },
+      ]);
+
+      setContacts([data, ...contacts]);
       setShowContactForm(false);
     } catch (error) {
       console.error("Erreur création:", error);
@@ -119,8 +140,21 @@ export default function ContactsPage() {
 
   const handleUpdateContact = async (contactId, updates) => {
     try {
-      await Contact.update(contactId, { ...updates, derniere_interaction: new Date().toISOString() });
-      setContacts(contacts.map((c) => (c.id === contactId ? { ...c, ...updates } : c)));
+      const { error } = await supabase
+        .from("contacts")
+        .update({
+          ...updates,
+          updated_date: new Date().toISOString(),
+        })
+        .eq("id", contactId);
+
+      if (error) throw error;
+
+      setContacts(
+        contacts.map((c) =>
+          c.id === contactId ? { ...c, ...updates } : c
+        )
+      );
       setEditingContact(null);
     } catch (error) {
       console.error("Erreur update:", error);
@@ -130,7 +164,13 @@ export default function ContactsPage() {
   const handleDeleteContact = async (contactId) => {
     if (confirm("Supprimer ce contact ?")) {
       try {
-        await Contact.delete(contactId);
+        const { error } = await supabase
+          .from("contacts")
+          .delete()
+          .eq("id", contactId);
+
+        if (error) throw error;
+
         setContacts(contacts.filter((c) => c.id !== contactId));
       } catch (error) {
         console.error("Erreur suppression:", error);
@@ -144,14 +184,21 @@ export default function ContactsPage() {
         {/* En-tête */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Contacts</h1>
-            <p className="text-slate-600 dark:text-slate-400">Gérez vos contacts et prospects</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              Contacts
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Gérez vos contacts et prospects
+            </p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setShowImportExport(true)}>
               <Upload className="w-4 h-4 mr-2" /> Import/Export
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowContactForm(true)}>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setShowContactForm(true)}
+            >
               <Plus className="w-4 h-4 mr-2" /> Nouveau contact
             </Button>
           </div>
@@ -185,7 +232,10 @@ export default function ContactsPage() {
             onEdit={setEditingContact}
             onDelete={handleDeleteContact}
             onUpdate={handleUpdateContact}
-            onOpenChat={(c) => { setShowChatSidebar(true); setSelectedContact(c); }}
+            onOpenChat={(c) => {
+              setShowChatSidebar(true);
+              setSelectedContact(c);
+            }}
             columns={columns}
             onColumnManager={() => setShowColumnManager(true)}
           />
@@ -195,7 +245,10 @@ export default function ContactsPage() {
       {/* Modals */}
       <AnimatePresence>
         {showContactForm && (
-          <ContactForm onClose={() => setShowContactForm(false)} onSave={handleCreateContact} />
+          <ContactForm
+            onClose={() => setShowContactForm(false)}
+            onSave={handleCreateContact}
+          />
         )}
         {editingContact && (
           <ContactForm
@@ -207,8 +260,14 @@ export default function ContactsPage() {
         {selectedContact && showContactDetails && (
           <ContactDetails
             contact={selectedContact}
-            onClose={() => { setShowContactDetails(false); setSelectedContact(null); }}
-            onEdit={() => { setEditingContact(selectedContact); setShowContactDetails(false); }}
+            onClose={() => {
+              setShowContactDetails(false);
+              setSelectedContact(null);
+            }}
+            onEdit={() => {
+              setEditingContact(selectedContact);
+              setShowContactDetails(false);
+            }}
             onDelete={handleDeleteContact}
           />
         )}
@@ -222,7 +281,13 @@ export default function ContactsPage() {
         {showColumnManager && (
           <ColumnManager
             columns={columns}
-            onColumnsChange={(cols) => { setColumns(cols); localStorage.setItem("contacts-columns", JSON.stringify(cols)); }}
+            onColumnsChange={(cols) => {
+              setColumns(cols);
+              localStorage.setItem(
+                "contacts-columns",
+                JSON.stringify(cols)
+              );
+            }}
             onClose={() => setShowColumnManager(false)}
           />
         )}
