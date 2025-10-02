@@ -1,3 +1,4 @@
+// pages/api/oauth/google/callback.js
 import { google } from "googleapis";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
@@ -14,9 +15,11 @@ export default async function handler(req, res) {
       `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`
     );
 
+    // 🔑 Récupération des tokens
     const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
 
-    // Vérif user courant
+    // Vérifier utilisateur courant
     const {
       data: { user },
       error: authErr,
@@ -24,22 +27,25 @@ export default async function handler(req, res) {
 
     if (authErr || !user) return res.status(401).send("Non authentifié");
 
-    // Sauvegarde tokens dans la table user_profiles
+    // Sauvegarde tokens
     const { error } = await supabase
       .from("user_profiles")
       .update({
         google_connected: true,
-        mail_access_token: tokens.access_token,
-        mail_refresh_token: tokens.refresh_token, // ⚠️ peut être null si Google ne le renvoie pas
-        mail_token_expiry: tokens.expiry_date, // optionnel si tu veux tracker l’expiration
+        mail_access_token: tokens.access_token || null,
+        mail_refresh_token: tokens.refresh_token || null,
+        mail_token_expiry: tokens.expiry_date || null,
       })
       .eq("id", user.id);
 
     if (error) throw error;
 
+    console.log("✅ Tokens enregistrés pour", user.email);
+
+    // Redirection front
     res.redirect("/settings?google=success");
   } catch (err) {
-    console.error("Google OAuth error:", err);
+    console.error("❌ Google OAuth error:", err);
     res.redirect("/settings?google=error");
   }
 }
