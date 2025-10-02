@@ -358,13 +358,13 @@ export default function EnhancedContactTable({
           {value ? (
             <>
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-green-100"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 border-green-200 text-green-600 hover:bg-green-50"
                 onClick={(e) => { e.stopPropagation(); window.open(`tel:${value}`); }}
                 title="Appeler ce numéro"
               >
-                <Phone className="w-3 h-3 text-green-600" />
+                <Phone className="w-4 h-4" />
               </Button>
               <span
                 className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 px-2 py-1 rounded"
