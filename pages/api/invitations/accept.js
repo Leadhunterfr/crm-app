@@ -1,5 +1,10 @@
 // pages/api/invitations/accept.js
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY // ⚠️ clé admin uniquement côté serveur
+);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -14,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     // Vérifier l'invitation
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await supabaseAdmin
       .from("invitations")
       .select("*")
       .eq("id", token)
@@ -25,17 +30,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invitation invalide ou déjà utilisée" });
     }
 
-    // Créer l'utilisateur dans Supabase Auth
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    // Créer l’utilisateur dans Supabase Auth (avec clé service role)
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: invite.email,
       password,
       email_confirm: true,
+      user_metadata: { full_name },
     });
 
     if (createError) throw createError;
 
     // Créer le profil lié
-    const { error: profileError } = await supabase.from("user_profiles").insert({
+    const { error: profileError } = await supabaseAdmin.from("user_profiles").insert({
       id: newUser.user.id,
       full_name,
       email: invite.email,
@@ -45,15 +51,15 @@ export default async function handler(req, res) {
 
     if (profileError) throw profileError;
 
-    // Marquer l'invitation comme acceptée
-    await supabase
+    // Marquer l’invitation comme acceptée
+    await supabaseAdmin
       .from("invitations")
       .update({ accepted: true })
       .eq("id", token);
 
     return res.status(200).json({ message: "Invitation acceptée ✅" });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Erreur accept-invite:", err);
     return res.status(500).json({ message: "Erreur serveur" });
   }
 }
