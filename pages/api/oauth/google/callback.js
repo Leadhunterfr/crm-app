@@ -5,7 +5,6 @@ export default async function handler(req, res) {
   try {
     const supabase = createServerSupabaseClient({ req, res });
 
-    // Récupération du code renvoyé par Google
     const code = req.query.code;
     if (!code) return res.status(400).send("Missing code");
 
@@ -20,25 +19,27 @@ export default async function handler(req, res) {
     // Vérif user courant
     const {
       data: { user },
+      error: authErr,
     } = await supabase.auth.getUser();
 
-    if (!user) return res.status(401).send("Non authentifié");
+    if (authErr || !user) return res.status(401).send("Non authentifié");
 
-    // Sauvegarde dans user_profiles
+    // Sauvegarde tokens dans la table user_profiles
     const { error } = await supabase
       .from("user_profiles")
       .update({
         google_connected: true,
-        google_refresh_token: tokens.refresh_token,
+        mail_access_token: tokens.access_token,
+        mail_refresh_token: tokens.refresh_token, // ⚠️ peut être null si Google ne le renvoie pas
+        mail_token_expiry: tokens.expiry_date, // optionnel si tu veux tracker l’expiration
       })
       .eq("id", user.id);
 
     if (error) throw error;
 
-    // Redirige vers settings
     res.redirect("/settings?google=success");
   } catch (err) {
-    console.error(err);
+    console.error("Google OAuth error:", err);
     res.redirect("/settings?google=error");
   }
 }
