@@ -1,18 +1,27 @@
+// pages/api/oauth/google/callback.js
 import { google } from "googleapis";
 
 export default async function handler(req, res) {
-  const { code } = req.query;
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`
+    );
 
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`
-  );
+    const { code } = req.query;
 
-  const { tokens } = await oauth2Client.getToken(code);
+    // Échange le code contre un access_token + refresh_token
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
 
-  // ⚡️ Ici → stocker tokens en DB (supabase) liés à l’utilisateur
-  // tokens.access_token, tokens.refresh_token
+    // Ici tu peux sauvegarder les tokens en BDD (liés à l’utilisateur)
+    // Exemple: refresh_token dans ta table user_profiles
+    // await supabase.from("user_profiles").update({ google_refresh_token: tokens.refresh_token }).eq("id", user.id)
 
-  res.redirect("/settings?mail=connected");
+    return res.redirect("/settings?google=connected");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur OAuth Google");
+  }
 }
