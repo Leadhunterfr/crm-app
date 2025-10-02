@@ -6,7 +6,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-
+import { Mail, Key, UserPlus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const user = useUser();
   const [userData, setUserData] = useState(null);
 
-  // Met à jour userData quand `user` est dispo
+  // Charge userData depuis Supabase Auth
   useEffect(() => {
     if (user) {
       setUserData({
@@ -45,9 +45,46 @@ export default function SettingsPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    try {
+      const res = await fetch("/api/user/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      if (!res.ok) throw new Error("Impossible d’envoyer l’email");
+      alert("Email de réinitialisation envoyé ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la demande de réinitialisation ❌");
+    }
+  };
+
+  const handleConnectGmail = () => {
+    alert("👉 Ici tu brancheras l’OAuth Google pour Gmail (Gmail API).");
+  };
+
+  const handleInviteUser = async () => {
+    const email = prompt("Email du collaborateur à inviter :");
+    if (!email) return;
+    try {
+      const res = await fetch("/api/admin/invite-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("Erreur envoi invitation");
+      alert("Invitation envoyée ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l’invitation ❌");
+    }
+  };
+
   return (
     <div className="p-6 bg-slate-100 dark:bg-slate-900 min-h-screen">
       <div className="max-w-3xl mx-auto space-y-8">
+        {/* Profil */}
         <Card>
           <CardHeader>
             <CardTitle>Mon profil</CardTitle>
@@ -100,6 +137,45 @@ export default function SettingsPage() {
             <div className="pt-4">
               <Button onClick={handleSaveProfile}>Enregistrer</Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Réinitialisation mot de passe */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Réinitialiser mon mot de passe</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleResetPassword}>
+              <Key className="mr-2 h-4 w-4" />
+              Réinitialiser
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Connexion Gmail */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Connexion Gmail</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleConnectGmail}>
+              <Mail className="mr-2 h-4 w-4" />
+              Connecter mon Gmail
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Invitations utilisateurs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Inviter des collaborateurs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleInviteUser}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Inviter un utilisateur
+            </Button>
           </CardContent>
         </Card>
       </div>
