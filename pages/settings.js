@@ -68,18 +68,31 @@ export default function SettingsPage() {
   };
 
   // Invitation via mailto:
-  const handleInviteUser = () => {
-    const inviteEmail = prompt("Email du collaborateur à inviter :");
-    if (!inviteEmail) return;
-
-    const subject = encodeURIComponent("Invitation à rejoindre CRM App");
-    const body = encodeURIComponent(
-      `Bonjour,\n\nVous avez été invité à rejoindre l'organisation sur CRM App.\n\nCréez votre compte ici : ${process.env.NEXT_PUBLIC_APP_URL}/accept-invite?email=${inviteEmail}\n\nÀ bientôt !`
-    );
-
-    // ouvre le client mail par défaut
-    window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`;
+  const handleInviteUser = async () => {
+    const email = prompt("Email du collaborateur à inviter :");
+    if (!email) return;
+  
+    try {
+      const res = await fetch("/api/admin/invite-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+  
+      if (!res.ok) throw new Error("Erreur envoi invitation");
+  
+      const { link } = await res.json();
+  
+      // Ouvre le client mail local avec le lien
+      window.location.href = `mailto:${email}?subject=Invitation à rejoindre CRM App&body=Bonjour,%0A%0AVous avez été invité à rejoindre l'organisation sur CRM App.%0A%0ACréez votre compte ici : ${link}%0A%0AÀ bientôt !`;
+  
+      alert("Invitation créée ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l’invitation ❌");
+    }
   };
+
 
   return (
     <div className="p-6 bg-slate-100 dark:bg-slate-900 min-h-screen">
