@@ -134,7 +134,7 @@ export default function ContactDetails({ contact, onClose, onEdit, onDelete }) {
                   )}
                 </div>
               </DialogTitle>
-
+          
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -156,9 +156,14 @@ export default function ContactDetails({ contact, onClose, onEdit, onDelete }) {
                   <Trash2 className="w-4 h-4 mr-2" />
                   Supprimer
                 </Button>
+                {/* 👉 Bouton Fermer */}
+                <Button variant="outline" onClick={onClose}>
+                  Fermer
+                </Button>
               </div>
             </div>
           </DialogHeader>
+
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* ======== Colonne principale ======== */}
