@@ -61,7 +61,7 @@ export default function SettingsPage() {
   };
 
   const handleConnectGmail = () => {
-    alert("👉 Ici tu brancheras l’OAuth Google pour Gmail (Gmail API).");
+    window.location.href = "/api/oauth/google";
   };
 
   const handleInviteUser = async () => {
