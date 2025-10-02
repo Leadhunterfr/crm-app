@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const user = useUser();
   const [userData, setUserData] = useState(null);
 
-  // Charge userData depuis Supabase Auth
+  // Charger infos utilisateur depuis Auth
   useEffect(() => {
     if (user) {
       setUserData({
@@ -30,6 +30,7 @@ export default function SettingsPage() {
   if (!user) return <p className="p-6">Non authentifié</p>;
   if (!userData) return <p className="p-6">Chargement...</p>;
 
+  // Sauvegarde du profil
   const handleSaveProfile = async () => {
     try {
       const res = await fetch("/api/user/update", {
@@ -45,6 +46,7 @@ export default function SettingsPage() {
     }
   };
 
+  // Reset mot de passe
   const handleResetPassword = async () => {
     try {
       const res = await fetch("/api/user/reset-password", {
@@ -60,25 +62,23 @@ export default function SettingsPage() {
     }
   };
 
+  // Connexion Gmail (sera branchée plus tard)
   const handleConnectGmail = () => {
     window.location.href = "/api/oauth/google";
   };
 
-  const handleInviteUser = async () => {
-    const email = prompt("Email du collaborateur à inviter :");
-    if (!email) return;
-    try {
-      const res = await fetch("/api/admin/invite-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error("Erreur envoi invitation");
-      alert("Invitation envoyée ✅");
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l’invitation ❌");
-    }
+  // Invitation via mailto:
+  const handleInviteUser = () => {
+    const inviteEmail = prompt("Email du collaborateur à inviter :");
+    if (!inviteEmail) return;
+
+    const subject = encodeURIComponent("Invitation à rejoindre CRM App");
+    const body = encodeURIComponent(
+      `Bonjour,\n\nVous avez été invité à rejoindre l'organisation sur CRM App.\n\nCréez votre compte ici : ${process.env.NEXT_PUBLIC_APP_URL}/accept-invite?email=${inviteEmail}\n\nÀ bientôt !`
+    );
+
+    // ouvre le client mail par défaut
+    window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`;
   };
 
   return (
