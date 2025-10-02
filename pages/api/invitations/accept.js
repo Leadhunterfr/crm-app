@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // ⚠️ clé admin uniquement côté serveur
+  process.env.SUPABASE_SERVICE_ROLE_KEY // ⚡ clé secrète admin
 );
 
 export default async function handler(req, res) {
@@ -30,12 +30,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invitation invalide ou déjà utilisée" });
     }
 
-    // Créer l’utilisateur dans Supabase Auth (avec clé service role)
+    // Créer l'utilisateur dans Supabase Auth (admin)
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: invite.email,
       password,
       email_confirm: true,
-      user_metadata: { full_name },
     });
 
     if (createError) throw createError;
@@ -51,15 +50,12 @@ export default async function handler(req, res) {
 
     if (profileError) throw profileError;
 
-    // Marquer l’invitation comme acceptée
-    await supabaseAdmin
-      .from("invitations")
-      .update({ accepted: true })
-      .eq("id", token);
+    // Marquer l'invitation comme acceptée
+    await supabaseAdmin.from("invitations").update({ accepted: true }).eq("id", token);
 
     return res.status(200).json({ message: "Invitation acceptée ✅" });
   } catch (err) {
-    console.error("❌ Erreur accept-invite:", err);
+    console.error("❌ Erreur API accept:", err);
     return res.status(500).json({ message: "Erreur serveur" });
   }
 }
