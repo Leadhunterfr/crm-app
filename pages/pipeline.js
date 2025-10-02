@@ -347,7 +347,7 @@ export default function PipelinePage() {
                               {PIPELINE_STAGES.filter(
                                 (s) => s.id !== c.statut
                               )
-                                .slice(0, 3)
+                                .slice(0, 7)
                                 .map((target) => (
                                   <Button
                                     key={target.id}
