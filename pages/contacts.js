@@ -137,7 +137,7 @@ export default function ContactsPage() {
 
   return (
     <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* En-tête */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
