@@ -239,6 +239,7 @@ export default function ContactsPage() {
           <ImportExportDialog
             onClose={() => setShowImportExport(false)}
             contacts={contacts}
+            currentUser={currentUser} 
             onImportComplete={loadContacts}
           />
         )}
