@@ -1,4 +1,4 @@
-
+// components/contacts/ImportExportDialog.js
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,106 +10,117 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Download, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Contact } from "@/entities/Contact";
-import { UploadFile, ExtractDataFromUploadedFile } from "@/integrations/Core";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function ImportExportDialog({ onClose, contacts, onImportComplete }) {
+export default function ImportExportDialog({ onClose, contacts, currentUser, onImportComplete }) {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [mapping, setMapping] = useState({});
+  const [rawColumns, setRawColumns] = useState([]);
+  const [rawData, setRawData] = useState([]);
+  const [step, setStep] = useState("upload"); // upload | mapping
 
-  const handleExport = async () => {
+  const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
+
+  // 🔹 Export
+  const handleExport = async (format = "csv") => {
     setExporting(true);
     try {
-      // Préparer les données pour l'export (uniquement les contacts filtrés)
-      const exportData = contacts.map(contact => ({
-        Prénom: contact.prenom,
-        Nom: contact.nom,
-        Société: contact.societe,
-        Email: contact.email,
-        Téléphone: contact.telephone,
-        'Site Web': contact.site_web, // Added new field
-        Source: contact.source,
-        Statut: contact.statut,
-        Fonction: contact.fonction,
-        Adresse: contact.adresse,
-        'Valeur estimée': contact.valeur_estimee,
-        Température: contact.temperature,
-        'Contact préféré': contact.methode_contact_preferee, // Added new field
-        'Date clôture prévue': contact.date_cloture_prevue,
-        Notes: contact.notes,
-        'Date création': contact.created_date,
-        'Dernière interaction': contact.derniere_interaction
+      const exportData = contacts.map(c => ({
+        prenom: c.prenom,
+        nom: c.nom,
+        societe: c.societe,
+        email: c.email,
+        telephone: c.telephone,
+        source: c.source,
+        statut: c.statut,
+        temperature: c.temperature,
       }));
 
-      // Convertir en CSV
-      const headers = Object.keys(exportData[0] || {});
-      const csvContent = [
-        headers.join(','),
-        ...exportData.map(row => 
-          headers.map(header => 
-            JSON.stringify(row[header] || '')
-          ).join(',')
-        )
-      ].join('\n');
-
-      // Télécharger le fichier
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `contacts-${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Erreur lors de l'export:", error);
+      if (format === "csv") {
+        const csv = Papa.unparse(exportData);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `contacts-${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
+      } else {
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Contacts");
+        XLSX.writeFile(wb, `contacts-${new Date().toISOString().split("T")[0]}.xlsx`);
+      }
+    } catch (err) {
+      console.error("Erreur export:", err);
     }
     setExporting(false);
   };
 
-  const handleImport = async () => {
-    if (!importFile) return;
+  // 🔹 Import parsing
+  const handleFileUpload = (file) => {
+    setImportFile(file);
+    if (file.name.endsWith(".csv")) {
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          setRawColumns(Object.keys(results.data[0] || {}));
+          setRawData(results.data);
+          setStep("mapping");
+        },
+      });
+    } else if (file.name.endsWith(".xlsx")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(e.target.result, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        setRawColumns(json[0]);
+        setRawData(json.slice(1).map((row) => {
+          let obj = {};
+          json[0].forEach((col, i) => (obj[col] = row[i]));
+          return obj;
+        }));
+        setStep("mapping");
+      };
+      reader.readAsBinaryString(file);
+    }
+  };
 
+  // 🔹 Import insertion
+  const handleConfirmMapping = async () => {
     setImporting(true);
     try {
-      // Upload du fichier
-      const { file_url } = await UploadFile({ file: importFile });
-      
-      // Extraction des données
-      const result = await ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            contacts: {
-              type: "array",
-              items: Contact.schema()
-            }
-          }
-        }
-      });
+      const mappedContacts = rawData
+        .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
+        .map((r) => {
+          let obj = {};
+          Object.entries(mapping).forEach(([field, csvCol]) => {
+            obj[field] = r[csvCol] || "";
+          });
+          obj.org_id = currentUser.org_id;
+          obj.user_id = currentUser.id;
+          return obj;
+        });
 
-      if (result.status === "success" && result.output?.contacts) {
-        // Créer les contacts
-        for (const contactData of result.output.contacts) {
-          await Contact.create(contactData);
-        }
-        
-        onImportComplete();
-        onClose();
-      } else {
-        throw new Error("Impossible d'extraire les données du fichier");
+      if (mappedContacts.length > 0) {
+        const { error } = await supabase.from("contacts").insert(mappedContacts);
+        if (error) throw error;
       }
-    } catch (error) {
-      console.error("Erreur lors de l'import:", error);
+      if (onImportComplete) onImportComplete();
+      onClose();
+    } catch (err) {
+      console.error("Erreur import:", err);
     }
     setImporting(false);
   };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import/Export des contacts</DialogTitle>
         </DialogHeader>
@@ -120,77 +131,72 @@ export default function ImportExportDialog({ onClose, contacts, onImportComplete
             <TabsTrigger value="import">Import</TabsTrigger>
           </TabsList>
 
+          {/* EXPORT */}
           <TabsContent value="export" className="space-y-4">
             <div className="text-center py-6">
               <FileSpreadsheet className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Exporter les contacts</h3>
               <p className="text-sm text-slate-600 mb-4">
-                Téléchargez tous vos contacts au format CSV
+                {contacts.length} contact{contacts.length > 1 ? "s" : ""} à exporter
               </p>
-              <p className="text-sm text-slate-500 mb-6">
-                {contacts.length} contact{contacts.length > 1 ? 's' : ''} à exporter
-              </p>
-              <Button 
-                onClick={handleExport} 
-                disabled={exporting || contacts.length === 0}
-                className="w-full"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {exporting ? "Export en cours..." : "Télécharger CSV"}
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="import" className="space-y-4">
-            <div className="text-center py-6">
-              <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Importer des contacts</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Importez vos contacts depuis un fichier CSV ou Excel
-              </p>
-              
-              <Alert className="text-left mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  Le fichier doit contenir les colonnes : Nom, Email (obligatoires), 
-                  Société, Téléphone, Site Web, Source, Statut, Contact préféré, etc.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6">
-                  <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    onChange={(e) => setImportFile(e.target.files[0])}
-                    className="hidden"
-                    id="import-file"
-                  />
-                  <label htmlFor="import-file" className="cursor-pointer">
-                    {importFile ? (
-                      <div className="text-sm">
-                        <p className="font-medium">{importFile.name}</p>
-                        <p className="text-slate-500">Cliquez pour changer</p>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-slate-500">
-                        <p>Cliquez pour sélectionner un fichier</p>
-                        <p>CSV, Excel acceptés</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                <Button 
-                  onClick={handleImport} 
-                  disabled={importing || !importFile}
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {importing ? "Import en cours..." : "Importer les contacts"}
+              <div className="flex gap-3">
+                <Button onClick={() => handleExport("csv")} disabled={exporting}>
+                  <Download className="w-4 h-4 mr-2" /> CSV
+                </Button>
+                <Button onClick={() => handleExport("xlsx")} disabled={exporting}>
+                  <Download className="w-4 h-4 mr-2" /> Excel
                 </Button>
               </div>
             </div>
+          </TabsContent>
+
+          {/* IMPORT */}
+          <TabsContent value="import" className="space-y-4">
+            {step === "upload" && (
+              <div className="text-center py-6">
+                <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Importer des contacts</h3>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx"
+                  onChange={(e) => handleFileUpload(e.target.files[0])}
+                  className="mt-4"
+                />
+              </div>
+            )}
+
+            {step === "mapping" && (
+              <div>
+                <h3 className="font-medium mb-4">Faites correspondre les colonnes</h3>
+                {supabaseFields.map((field) => (
+                  <div key={field} className="flex gap-3 items-center mb-2">
+                    <span className="w-40 font-medium">{field}</span>
+                    <select
+                      className="border rounded p-1 flex-1"
+                      value={mapping[field] || ""}
+                      onChange={(e) =>
+                        setMapping((prev) => ({ ...prev, [field]: e.target.value }))
+                      }
+                    >
+                      <option value="">-- Ne pas importer --</option>
+                      {rawColumns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+                <div className="flex justify-end mt-4 gap-2">
+                  <Button variant="outline" onClick={() => setStep("upload")}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleConfirmMapping} disabled={importing}>
+                    {importing ? "Import..." : "Confirmer"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
