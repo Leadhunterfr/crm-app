@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -7,22 +6,39 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, X } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function ImportExportDialog({ onClose, contacts, currentUser, onImportComplete }) {
-  const [view, setView] = useState("export"); // "export" | "import"
+  const [open, setOpen] = useState(true);
+  const [view, setView] = useState("export");
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [mapping, setMapping] = useState({});
   const [rawColumns, setRawColumns] = useState([]);
   const [rawData, setRawData] = useState([]);
   const [step, setStep] = useState("upload");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
+  // ✅ nouveaux champs ajoutés
+  const supabaseFields = [
+    "prenom",
+    "nom",
+    "societe",
+    "email",
+    "telephone",
+    "adresse",
+    "site",
+    "linkedin",
+    "statut",
+    "source",
+    "temperature",
+  ];
+
   const [currentUserState, setCurrentUserState] = useState(currentUser || null);
 
   useEffect(() => {
@@ -45,6 +61,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         societe: c.societe,
         email: c.email,
         telephone: c.telephone,
+        adresse: c.adresse,
+        site: c.site,
+        linkedin: c.linkedin,
         source: c.source,
         statut: c.statut,
         temperature: c.temperature,
@@ -107,6 +126,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   // ---------------- IMPORT (insertion) ----------------
   const handleConfirmMapping = async () => {
     setImporting(true);
+    setErrorMsg("");
     try {
       const mappedContacts = rawData
         .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
@@ -125,9 +145,11 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         if (error) throw error;
       }
       if (onImportComplete) onImportComplete();
+      setOpen(false);
       onClose();
     } catch (err) {
       console.error("Erreur import:", err);
+      setErrorMsg(err.message || "Erreur lors de l'import");
     } finally {
       setImporting(false);
     }
@@ -135,10 +157,13 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   // ---------------- RENDER ----------------
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) onClose(); }}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
+        <DialogHeader className="flex justify-between items-center">
           <DialogTitle>Import/Export des contacts</DialogTitle>
+          <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+            <X className="w-5 h-5" />
+          </Button>
         </DialogHeader>
 
         {/* Switch export / import */}
@@ -214,6 +239,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                     </select>
                   </div>
                 ))}
+                {errorMsg && <p className="text-red-600 text-sm mt-2">{errorMsg}</p>}
                 <div className="flex justify-end mt-4 gap-2">
                   <Button variant="outline" onClick={() => setStep("upload")}>
                     Annuler
@@ -226,6 +252,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
             )}
           </div>
         )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Fermer</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
