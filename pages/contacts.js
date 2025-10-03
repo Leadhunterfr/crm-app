@@ -121,18 +121,23 @@ export default function ContactsPage() {
         .from("contacts")
         .update(updates)
         .eq("id", contactId)
-        .select()
-        .single();
-
+        .select("*"); // on récupère un tableau
+  
       if (error) throw error;
-      setContacts(
-        contacts.map((c) => (c.id === contactId ? { ...c, ...data } : c))
-      );
+  
+      if (data && data.length > 0) {
+        setContacts(
+          contacts.map((c) =>
+            c.id === contactId ? { ...c, ...data[0] } : c
+          )
+        );
+      }
       setEditingContact(null);
     } catch (error) {
       console.error("Erreur update:", error);
     }
   };
+
 
   const handleDeleteContact = async (contactId) => {
     if (confirm("Supprimer ce contact ?")) {
