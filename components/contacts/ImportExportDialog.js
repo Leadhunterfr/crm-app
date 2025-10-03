@@ -178,9 +178,13 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                 {contacts.length} contact{contacts.length > 1 ? "s" : ""} à exporter
               </p>
               <div className="flex gap-3">
-                <Button onClick={() => handleExport("csv")} disabled={exporting}>
-                  <Download className="w-4 h-4 mr-2" /> CSV
-                </Button>
+                <button
+                  onClick={() => handleExport("csv")}
+                  disabled={exporting}
+                  className="px-4 py-2 rounded bg-blue-600 text-white"
+                >
+                  Test CSV
+                </button>
                 <Button onClick={() => handleExport("xlsx")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> Excel
                 </Button>
