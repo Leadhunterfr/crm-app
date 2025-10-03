@@ -1,4 +1,4 @@
-// components/pipeline/QuickInteractionDialog.js
+// components/pipeline/QuickDialog.js
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -23,78 +23,76 @@ import {
   Phone,
   Mail,
   Linkedin,
-  Calendar,
-  FileText,
-  Clock,
+  Bell,
   Save,
-  Users,
+  Clock,
 } from "lucide-react";
 
+// 🔹 mêmes types que ChatSidebar
 const interactionTypes = [
   { value: "Appel", label: "Appel téléphonique", icon: Phone },
   { value: "Email", label: "Email", icon: Mail },
   { value: "LinkedIn", label: "Message LinkedIn", icon: Linkedin },
-  { value: "Réunion", label: "Réunion", icon: Calendar },
-  { value: "Note", label: "Note", icon: MessageSquare },
-  { value: "NoteInterne", label: "Note interne", icon: Users },
-  { value: "Modification", label: "Modification", icon: FileText },
+  { value: "Note", label: "Note générale", icon: MessageSquare },
 ];
 
-export default function QuickInteractionDialog({
-  contact,
-  onClose,
-  onInteractionAdded,
-}) {
-  const [formData, setFormData] = useState({
+const rappelTypes = [
+  { value: "Appel", label: "Rappel d'appel", icon: Phone },
+  { value: "Email", label: "Rappel email", icon: Mail },
+  { value: "Autre", label: "Autre rappel", icon: Bell },
+];
+
+export default function QuickDialog({ contact, onClose, onInteractionAdded, onRappelAdded }) {
+  const [activeTab, setActiveTab] = useState("interaction");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const [interaction, setInteraction] = useState({
     type: "Note",
     description: "",
-    date_interaction: new Date().toISOString().slice(0, 16), // pour input datetime-local
+    date_interaction: new Date().toISOString().slice(0, 16),
   });
-  const [saving, setSaving] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
 
-  // 🔹 Charger utilisateur courant depuis Supabase
+  const [rappel, setRappel] = useState({
+    type: "Appel",
+    date_rappel: new Date().toISOString().slice(0, 16),
+    note: "",
+  });
+
+  // 🔹 Charger utilisateur courant
   useEffect(() => {
     const fetchUser = async () => {
       const {
         data: { user },
         error,
       } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Erreur chargement user:", error);
-        return;
-      }
-      setCurrentUser(user);
+      if (!error) setCurrentUser(user);
     };
     fetchUser();
   }, []);
 
-  // 🔹 Soumission
-  const handleSubmit = async (e) => {
+  // 🔹 Ajout Interaction
+  const handleInteractionSubmit = async (e) => {
     e.preventDefault();
+    if (!interaction.description.trim()) return;
     setSaving(true);
-
     try {
-      const interactionData = {
-        contact_id: contact.id,
-        type: formData.type,
-        description: formData.description,
-        date_interaction: new Date(formData.date_interaction).toISOString(),
-        created_by_user_id: currentUser?.id || null,
-        created_by_user_name:
-          currentUser?.user_metadata?.full_name || currentUser?.email || "Inconnu",
-        internal: formData.type === "NoteInterne",
-        created_at: new Date().toISOString(),
-      };
-
       const { data, error } = await supabase
         .from("interactions")
-        .insert([interactionData])
+        .insert([
+          {
+            contact_id: contact.id,
+            type: interaction.type,
+            description: interaction.description,
+            date_interaction: new Date(interaction.date_interaction).toISOString(),
+            created_by_user_id: currentUser?.id,
+            org_id: contact.org_id,
+          },
+        ])
         .select()
         .single();
 
       if (error) throw error;
-
       if (onInteractionAdded) onInteractionAdded(data);
       onClose();
     } catch (err) {
@@ -104,14 +102,35 @@ export default function QuickInteractionDialog({
     }
   };
 
-  const getSelectedIcon = () => {
-    const selectedType = interactionTypes.find(
-      (t) => t.value === formData.type
-    );
-    return selectedType ? selectedType.icon : MessageSquare;
-  };
+  // 🔹 Ajout Rappel
+  const handleRappelSubmit = async (e) => {
+    e.preventDefault();
+    if (!rappel.note.trim()) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from("rappels")
+        .insert([
+          {
+            contact_id: contact.id,
+            user_id: currentUser?.id,
+            type: rappel.type,
+            date_rappel: new Date(rappel.date_rappel).toISOString(),
+            note: rappel.note,
+          },
+        ])
+        .select()
+        .single();
 
-  const SelectedIcon = getSelectedIcon();
+      if (error) throw error;
+      if (onRappelAdded) onRappelAdded(data);
+      onClose();
+    } catch (err) {
+      console.error("Erreur ajout rappel:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -119,98 +138,166 @@ export default function QuickInteractionDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Ajouter une interaction
+            {activeTab === "interaction" ? "Ajouter une interaction" : "Planifier une tâche"}
           </DialogTitle>
           <p className="text-sm text-slate-600">
-            Contact: <strong>{contact.nom}</strong>
+            Contact: <strong>{contact.prenom} {contact.nom}</strong>
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Type d'interaction</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, type: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {interactionTypes.map((type) => {
-                  const Icon = type.icon;
-                  return (
-                    <SelectItem key={type.value} value={type.value}>
-                      <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4" />
-                        {type.label}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Onglets */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            type="button"
+            variant={activeTab === "interaction" ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("interaction")}
+          >
+            Interactions
+          </Button>
+          <Button
+            type="button"
+            variant={activeTab === "rappel" ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("rappel")}
+          >
+            Tâches
+          </Button>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="date_interaction">Date et heure</Label>
-            <Input
-              id="date_interaction"
-              type="datetime-local"
-              value={formData.date_interaction}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  date_interaction: e.target.value,
-                }))
-              }
-              required
-            />
-          </div>
+        {/* Formulaires */}
+        {activeTab === "interaction" && (
+          <form onSubmit={handleInteractionSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type d'interaction</Label>
+              <Select
+                value={interaction.type}
+                onValueChange={(value) =>
+                  setInteraction((prev) => ({ ...prev, type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {interactionTypes.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <SelectItem key={t.value} value={t.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          {t.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              Description
-              {formData.type === "NoteInterne" && (
-                <span className="text-xs text-slate-500 ml-2">
-                  (Note visible uniquement par l'équipe interne)
-                </span>
-              )}
-            </Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-              placeholder={
-                formData.type === "NoteInterne"
-                  ? "Ajouter une note interne pour l'équipe..."
-                  : "Décrivez l'interaction..."
-              }
-              rows={4}
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>Date et heure</Label>
+              <Input
+                type="datetime-local"
+                value={interaction.date_interaction}
+                onChange={(e) =>
+                  setInteraction((prev) => ({
+                    ...prev,
+                    date_interaction: e.target.value,
+                  }))
+                }
+              />
+            </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving || !formData.description.trim()}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Enregistrement..." : "Enregistrer"}
-            </Button>
-          </div>
-        </form>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={interaction.description}
+                onChange={(e) =>
+                  setInteraction((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="Décrivez l'interaction..."
+                rows={3}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {activeTab === "rappel" && (
+          <form onSubmit={handleRappelSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type de tâche</Label>
+              <Select
+                value={rappel.type}
+                onValueChange={(value) =>
+                  setRappel((prev) => ({ ...prev, type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rappelTypes.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <SelectItem key={t.value} value={t.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          {t.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date et heure</Label>
+              <Input
+                type="datetime-local"
+                value={rappel.date_rappel}
+                onChange={(e) =>
+                  setRappel((prev) => ({ ...prev, date_rappel: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Note</Label>
+              <Textarea
+                value={rappel.note}
+                onChange={(e) =>
+                  setRappel((prev) => ({ ...prev, note: e.target.value }))
+                }
+                placeholder="Que devez-vous faire ou vous rappeler ?"
+                rows={3}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
