@@ -157,8 +157,10 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                 <Button onClick={() => handleExport("csv")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> CSV
                 </Button>
+                
                 <Button onClick={() => handleExport("xlsx")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> Excel
+                </Button>
                 </Button>
               </div>
             </div>
@@ -205,7 +207,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                   <Button variant="outline" onClick={() => setStep("upload")}>
                     Annuler
                   </Button>
-                  <Button onClick={() => handleConfirmMapping()} disabled={importing}>
+                  <Button onClick={handleConfirmMapping} disabled={importing}>
                     {importing ? "Import..." : "Confirmer"}
                   </Button>
                 </div>
