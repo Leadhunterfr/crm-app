@@ -25,7 +25,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [ setCurrentUser] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
