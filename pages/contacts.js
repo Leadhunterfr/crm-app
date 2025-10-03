@@ -116,12 +116,16 @@ export default function ContactsPage() {
   };
 
   const handleUpdateContact = async (contactId, updates) => {
+    console.log("🔄 Update contact:", contactId, updates); // log debug
+  
     try {
       const { data, error } = await supabase
         .from("contacts")
         .update(updates)
         .eq("id", contactId)
-        .select("*"); // on récupère un tableau
+        .select("*");
+  
+      console.log("📤 Supabase update result:", { data, error }); // log debug
   
       if (error) throw error;
   
@@ -134,7 +138,7 @@ export default function ContactsPage() {
       }
       setEditingContact(null);
     } catch (error) {
-      console.error("Erreur update:", error);
+      console.error("❌ Erreur update:", error);
     }
   };
 
