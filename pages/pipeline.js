@@ -175,7 +175,7 @@ export default function PipelinePage() {
 
   return (
     <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* En-tête */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
