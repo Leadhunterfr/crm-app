@@ -39,8 +39,11 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
+    console.log("handleExport CALLED with format:", format, "contacts:", contacts); // 🔍 log ici
+    setExporting(true);
+  
     try {
-      const exportData = contacts.map(c => ({
+      const exportData = contacts.map((c) => ({
         prenom: c.prenom,
         nom: c.nom,
         societe: c.societe,
@@ -50,9 +53,12 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         statut: c.statut,
         temperature: c.temperature,
       }));
-
+  
+      console.log("Export data ready:", exportData); // 🔍 log avant génération fichier
+  
       if (format === "csv") {
         const csv = Papa.unparse(exportData);
+        console.log("CSV generated:", csv.slice(0, 100)); // 🔍 log début CSV
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -63,7 +69,10 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Contacts");
-        XLSX.writeFile(wb, `contacts-${new Date().toISOString().split("T")[0]}.xlsx`);
+        XLSX.writeFile(
+          wb,
+          `contacts-${new Date().toISOString().split("T")[0]}.xlsx`
+        );
       }
     } catch (err) {
       console.error("Erreur export:", err);
@@ -72,15 +81,19 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     }
   };
 
+
   // ---------------- IMPORT (parsing) ----------------
   const handleFileUpload = (file) => {
+    console.log("File upload triggered:", file); // 🔍
     if (!file) return;
+  
     setImportFile(file);
-
+  
     if (file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
+          console.log("Parsed CSV results:", results.data.slice(0, 3)); // 🔍
           setRawColumns(Object.keys(results.data[0] || {}));
           setRawData(results.data);
           setStep("mapping");
@@ -92,6 +105,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         const wb = XLSX.read(e.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        console.log("Parsed XLSX JSON:", json.slice(0, 3)); // 🔍
         setRawColumns(json[0]);
         setRawData(
           json.slice(1).map((row) => {
@@ -106,34 +120,45 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     }
   };
 
-  // ---------------- IMPORT (insertion) ----------------
-  const handleConfirmMapping = async () => {
-    setImporting(true);
-    try {
-      const mappedContacts = rawData
-        .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
-        .map((r) => {
-          let obj = {};
-          Object.entries(mapping).forEach(([field, csvCol]) => {
-            obj[field] = r[csvCol] || "";
-          });
-          obj.org_id = currentUserState?.user_metadata?.org_id || null;
-          obj.user_id = currentUserState?.id || null;
-          return obj;
-        });
 
-      if (mappedContacts.length > 0) {
-        const { error } = await supabase.from("contacts").insert(mappedContacts);
-        if (error) throw error;
-      }
-      if (onImportComplete) onImportComplete();
-      onClose();
-    } catch (err) {
-      console.error("Erreur import:", err);
-    } finally {
-      setImporting(false);
+  // ---------------- IMPORT (parsing) ----------------
+  const handleFileUpload = (file) => {
+    console.log("File upload triggered:", file); // 🔍
+    if (!file) return;
+  
+    setImportFile(file);
+  
+    if (file.name.endsWith(".csv")) {
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          console.log("Parsed CSV results:", results.data.slice(0, 3)); // 🔍
+          setRawColumns(Object.keys(results.data[0] || {}));
+          setRawData(results.data);
+          setStep("mapping");
+        },
+      });
+    } else if (file.name.endsWith(".xlsx")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(e.target.result, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        console.log("Parsed XLSX JSON:", json.slice(0, 3)); // 🔍
+        setRawColumns(json[0]);
+        setRawData(
+          json.slice(1).map((row) => {
+            let obj = {};
+            json[0].forEach((col, i) => (obj[col] = row[i]));
+            return obj;
+          })
+        );
+        setStep("mapping");
+      };
+      reader.readAsBinaryString(file);
     }
   };
+
 
   // ---------------- RENDER ----------------
   return (
