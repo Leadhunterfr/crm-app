@@ -18,62 +18,56 @@ import { fr } from "date-fns/locale";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [orgSeats, setOrgSeats] = useState(null); // ✅ nombre total de sièges
+  const [orgSeats, setOrgSeats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Charger utilisateur courant + organisation
-  const loadCurrentUserAndOrg = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Profil utilisateur
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("*, organizations(seat)")
-      .eq("id", user.id)
-      .single();
-
-    if (profile) {
-      setCurrentUser(profile);
-      setOrgSeats(profile.organizations?.seat || 0); // ✅ nombre de sièges
-    }
-  };
-
-  // Charger tous les utilisateurs de la même organisation
-  const loadUsers = async () => {
+  const loadOrgAndUsers = async () => {
     setLoading(true);
     try {
+      // 1. Récupérer user courant
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Récupérer org_id du user courant
-      const { data: profile } = await supabase
+      // 2. Charger profil courant avec org_id
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("org_id")
         .eq("id", user.id)
         .single();
 
-      if (!profile?.org_id) return;
+      if (profileError || !profile?.org_id) {
+        console.error("Impossible de trouver org_id:", profileError);
+        return;
+      }
 
-      const { data, error } = await supabase
+      // 3. Charger organisation (pour le nombre de sièges)
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .select("seat")
+        .eq("id", profile.org_id)
+        .single();
+
+      if (orgError) console.error("Erreur récupération organisation:", orgError);
+      else setOrgSeats(org?.seat || 0);
+
+      // 4. Charger tous les utilisateurs liés à cette organisation
+      const { data: orgUsers, error: usersError } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("org_id", profile.org_id);
 
-      if (!error) setUsers(data);
+      if (usersError) console.error("Erreur récupération users:", usersError);
+      else setUsers(orgUsers || []);
     } catch (err) {
-      console.error("Erreur chargement utilisateurs:", err);
+      console.error("Erreur loadOrgAndUsers:", err);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    loadCurrentUserAndOrg();
-    loadUsers();
+    loadOrgAndUsers();
   }, []);
 
-  // === Rendu ===
   if (loading) return <p className="p-6">Chargement...</p>;
 
   return (
@@ -84,7 +78,7 @@ export default function UserManagementPage() {
           <motion.div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border">
             <p>Utilisateurs</p>
             <h3 className="text-2xl font-bold">
-              {users.length}{orgSeats ? ` / ${orgSeats}` : ""} {/* ✅ 2/5 sièges */}
+              {users.length}{orgSeats ? ` / ${orgSeats}` : ""}
             </h3>
           </motion.div>
         </div>
@@ -105,29 +99,28 @@ export default function UserManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => {
-                  const roleIcon = u.role === "admin" ? Crown : UserIcon;
-                  const roleColor =
-                    u.role === "admin"
-                      ? "bg-orange-100 text-orange-800 border-orange-200"
-                      : "bg-blue-100 text-blue-800 border-blue-200";
-
-                  return (
-                    <TableRow key={u.id}>
-                      <TableCell>{u.full_name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Badge className={roleColor}>
-                          {React.createElement(roleIcon, { className: "w-3 h-3 mr-1" })}
-                          {u.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {u.last_seen ? format(new Date(u.last_seen), "dd MMM yyyy HH:mm", { locale: fr }) : "Jamais"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>{u.full_name || "—"}</TableCell>
+                    <TableCell>{u.email || "—"}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          u.role === "admin"
+                            ? "bg-orange-100 text-orange-800 border-orange-200"
+                            : "bg-blue-100 text-blue-800 border-blue-200"
+                        }
+                      >
+                        {u.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {u.last_seen
+                        ? format(new Date(u.last_seen), "dd MMM yyyy HH:mm", { locale: fr })
+                        : "Jamais"}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
