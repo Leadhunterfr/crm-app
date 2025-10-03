@@ -13,6 +13,16 @@ import ChatSidebar from "@/components/contacts/ChatSidebar";
 import { motion, AnimatePresence } from "framer-motion";
 
 
+const [currentUser, setCurrentUser] = useState(null);
+
+useEffect(() => {
+  const loadUser = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (!error) setCurrentUser(user);
+  };
+  loadUser();
+}, []);
+
 // Colonnes par défaut
 const DEFAULT_COLUMNS = [
   { id: "prenom", label: "Prénom", visible: true, width: "150px" },
