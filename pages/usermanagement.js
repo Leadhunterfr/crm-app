@@ -1,92 +1,87 @@
-import React, { useState, useEffect } from "react";
+// pages/users.js (ou la page de gestion des utilisateurs)
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Users, Shield, Crown, User as UserIcon, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState([]);
-  const [orgSeats, setOrgSeats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [orgId, setOrgId] = useState(null);
+  const [orgSeats, setOrgSeats] = useState(null);
+  const [users, setUsers] = useState([]);
 
-  const loadOrgAndUsers = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      // 1. Récupérer user courant
+      // 1) User courant (auth)
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      // 2. Charger profil courant avec org_id
-      const { data: profile, error: profileError } = await supabase
+      // 2) Son profil pour choper org_id
+      const { data: me, error: meErr } = await supabase
         .from("user_profiles")
         .select("org_id")
         .eq("id", user.id)
         .single();
 
-      if (profileError || !profile?.org_id) {
-        console.error("Impossible de trouver org_id:", profileError);
+      if (meErr || !me?.org_id) {
+        console.error("Impossible de récupérer org_id du user courant", meErr);
+        setLoading(false);
         return;
       }
 
-      // 3. Charger organisation (pour le nombre de sièges)
-      const { data: org, error: orgError } = await supabase
-        .from("organizations")
-        .select("seat")
-        .eq("id", profile.org_id)
-        .single();
+      setOrgId(me.org_id);
 
-      if (orgError) console.error("Erreur récupération organisation:", orgError);
-      else setOrgSeats(org?.seat || 0);
+      // 3) En parallèle: organization (seat) + tous les profils de la même org
+      const [{ data: org, error: orgErr }, { data: members, error: membersErr }] =
+        await Promise.all([
+          supabase.from("organizations").select("seat").eq("id", me.org_id).single(),
+          supabase
+            .from("user_profiles")
+            .select("id, full_name, email, role, created_at")
+            .eq("org_id", me.org_id)
+            .order("created_at", { ascending: true }),
+        ]);
 
-      // 4. Charger tous les utilisateurs liés à cette organisation
-      const { data: orgUsers, error: usersError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("org_id", profile.org_id);
+      if (orgErr) console.error("Erreur chargement organization:", orgErr);
+      if (membersErr) console.error("Erreur chargement users:", membersErr);
 
-      if (usersError) console.error("Erreur récupération users:", usersError);
-      else setUsers(orgUsers || []);
-    } catch (err) {
-      console.error("Erreur loadOrgAndUsers:", err);
+      setOrgSeats(org?.seat ?? 0);
+      setUsers(members || []);
+    } catch (e) {
+      console.error("Erreur loadData:", e);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    loadOrgAndUsers();
+    loadData();
   }, []);
 
-  if (loading) return <p className="p-6">Chargement...</p>;
+  if (loading) return <p className="p-6">Chargement…</p>;
 
   return (
     <div className="p-6 min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto">
-        {/* Stats */}
+        {/* Stat sièges occupés / disponibles */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <motion.div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border">
-            <p>Utilisateurs</p>
+            <p className="text-slate-600">Utilisateurs (org)</p>
             <h3 className="text-2xl font-bold">
-              {users.length}{orgSeats ? ` / ${orgSeats}` : ""}
+              {users.length}{typeof orgSeats === "number" ? ` / ${orgSeats}` : ""}
             </h3>
           </motion.div>
         </div>
 
-        {/* Table */}
+        {/* Liste des profils de l’org */}
         <Card>
           <CardHeader>
-            <CardTitle>Utilisateurs de l'organisation</CardTitle>
+            <CardTitle>Utilisateurs de l’organisation</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -95,7 +90,7 @@ export default function UserManagementPage() {
                   <TableHead>Nom</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Rôle</TableHead>
-                  <TableHead>Dernière connexion</TableHead>
+                  <TableHead>Créé le</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,16 +106,23 @@ export default function UserManagementPage() {
                             : "bg-blue-100 text-blue-800 border-blue-200"
                         }
                       >
-                        {u.role}
+                        {u.role || "user"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {u.last_seen
-                        ? format(new Date(u.last_seen), "dd MMM yyyy HH:mm", { locale: fr })
-                        : "Jamais"}
+                      {u.created_at
+                        ? new Date(u.created_at).toLocaleDateString()
+                        : "—"}
                     </TableCell>
                   </TableRow>
                 ))}
+                {users.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-slate-500">
+                      Aucun utilisateur pour cette organisation.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
