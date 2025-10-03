@@ -147,7 +147,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           Object.entries(mapping).forEach(([field, csvCol]) => {
             obj[field] = r[csvCol] || "";
           });
-          obj.org_id = currentUserState?.user_metadata?.org_id || null;
+          obj.org_id = currentUserState?.app_metadata?.org_id 
+                    || currentUserState?.user_metadata?.org_id 
+                    || null;
           obj.user_id = currentUserState?.id || null;
           return obj;
         });
