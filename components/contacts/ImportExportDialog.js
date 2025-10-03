@@ -41,14 +41,31 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   const [currentUserState, setCurrentUserState] = useState(currentUser || null);
 
   useEffect(() => {
-    if (!currentUser) {
-      const loadUser = async () => {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (!error) setCurrentUserState(user);
-      };
-      loadUser();
-    }
+    const loadUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user) {
+        // récupérer org_id dans user_profiles
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("org_id")
+          .eq("id", user.id)
+          .single();
+  
+        if (!profileError) {
+          setCurrentUserState({
+            ...user,
+            org_id: profile?.org_id || null
+          });
+          console.log("🔑 org_id chargé:", profile?.org_id);
+        } else {
+          console.error("Erreur chargement org_id:", profileError);
+          setCurrentUserState(user); // fallback sans org_id
+        }
+      }
+    };
+    if (!currentUser) loadUser();
   }, [currentUser]);
+
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
@@ -148,9 +165,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           Object.entries(mapping).forEach(([field, csvCol]) => {
             obj[field] = r[csvCol] || "";
           });
-          obj.org_id = currentUserState?.app_metadata?.org_id 
-                    || currentUserState?.user_metadata?.org_id 
-                    || null;
+          obj.org_id = currentUserState?.org_id || null;
           obj.user_id = currentUserState?.id || null;
           return obj;
         });
