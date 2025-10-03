@@ -25,6 +25,16 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
 
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error) setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
+
   // 🔹 Export
   const handleExport = async (format = "csv") => {
     setExporting(true);
@@ -101,8 +111,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           Object.entries(mapping).forEach(([field, csvCol]) => {
             obj[field] = r[csvCol] || "";
           });
-          obj.org_id = currentUser.org_id;
-          obj.user_id = currentUser.id;
+          obj.org_id = currentUser?.user_metadata?.org_id || null;
+          obj.user_id = currentUser?.id || null;
           return obj;
         });
 
