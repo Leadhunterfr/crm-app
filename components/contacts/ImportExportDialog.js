@@ -121,44 +121,39 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   };
 
 
-  // ---------------- IMPORT (parsing) ----------------
-  const handleFileUpload = (file) => {
-    console.log("File upload triggered:", file); // 🔍
-    if (!file) return;
+   // ---------------- IMPORT (insertion) ----------------
+  const handleConfirmMapping = async () => {
+    console.log("Confirm mapping clicked, mapping:", mapping); // 🔍
+    setImporting(true);
   
-    setImportFile(file);
+    try {
+      const mappedContacts = rawData
+        .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
+        .map((r) => {
+          let obj = {};
+          Object.entries(mapping).forEach(([field, csvCol]) => {
+            obj[field] = r[csvCol] || "";
+          });
+          obj.org_id = currentUserState?.user_metadata?.org_id || null;
+          obj.user_id = currentUserState?.id || null;
+          return obj;
+        });
   
-    if (file.name.endsWith(".csv")) {
-      Papa.parse(file, {
-        header: true,
-        complete: (results) => {
-          console.log("Parsed CSV results:", results.data.slice(0, 3)); // 🔍
-          setRawColumns(Object.keys(results.data[0] || {}));
-          setRawData(results.data);
-          setStep("mapping");
-        },
-      });
-    } else if (file.name.endsWith(".xlsx")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const wb = XLSX.read(e.target.result, { type: "binary" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        console.log("Parsed XLSX JSON:", json.slice(0, 3)); // 🔍
-        setRawColumns(json[0]);
-        setRawData(
-          json.slice(1).map((row) => {
-            let obj = {};
-            json[0].forEach((col, i) => (obj[col] = row[i]));
-            return obj;
-          })
-        );
-        setStep("mapping");
-      };
-      reader.readAsBinaryString(file);
+      console.log("Mapped contacts ready to insert:", mappedContacts); // 🔍
+  
+      if (mappedContacts.length > 0) {
+        const { error } = await supabase.from("contacts").insert(mappedContacts);
+        if (error) throw error;
+        console.log("Contacts imported successfully"); // 🔍
+      }
+      if (onImportComplete) onImportComplete();
+      onClose();
+    } catch (err) {
+      console.error("Erreur import:", err);
+    } finally {
+      setImporting(false);
     }
   };
-
 
   // ---------------- RENDER ----------------
   return (
