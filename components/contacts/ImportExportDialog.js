@@ -136,7 +136,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     try {
       console.log("📊 Raw data:", rawData.slice(0, 5));
       console.log("🗺 Mapping:", mapping);
-  
+      console.log("👤 currentUserState:", currentUserState);
+      
       const mappedContacts = rawData
         .filter((r) => {
           // on garde la ligne si au moins "societe" OU "email" est rempli
