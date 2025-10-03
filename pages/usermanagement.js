@@ -15,42 +15,46 @@ export default function UserManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 1) User courant (auth)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
       }
-
-      // 2) Son profil pour choper org_id
+  
+      // profil courant → org_id
       const { data: me, error: meErr } = await supabase
         .from("user_profiles")
         .select("org_id")
         .eq("id", user.id)
         .single();
-
+  
       if (meErr || !me?.org_id) {
         console.error("Impossible de récupérer org_id du user courant", meErr);
         setLoading(false);
         return;
       }
-
-      setOrgId(me.org_id);
-
-      // 3) En parallèle: organization (seat) + tous les profils de la même org
-      const [{ data: org, error: orgErr }, { data: members, error: membersErr }] =
-        await Promise.all([
-          supabase.from("organizations").select("seat").eq("id", me.org_id).single(),
-          supabase
-            .from("user_profiles")
-            .select("id, full_name, email, role, created_at")
-            .eq("org_id", me.org_id)
-            .order("created_at", { ascending: true }),
-        ]);
-
-      if (orgErr) console.error("Erreur chargement organization:", orgErr);
+  
+      console.log("➡️ org_id courant:", me.org_id);
+  
+      // organisation (nb seats)
+      const { data: org, error: orgErr } = await supabase
+        .from("organizations")
+        .select("seat")
+        .eq("id", me.org_id)
+        .single();
+  
+      if (orgErr) console.error("Erreur chargement org:", orgErr);
+  
+      // tous les profils de l’org
+      const { data: members, error: membersErr } = await supabase
+        .from("user_profiles")
+        .select("id, full_name, email, role, created_at, org_id")
+        .eq("org_id", me.org_id);
+  
       if (membersErr) console.error("Erreur chargement users:", membersErr);
-
+  
+      console.log("➡️ membres récupérés:", members);
+  
       setOrgSeats(org?.seat ?? 0);
       setUsers(members || []);
     } catch (e) {
@@ -58,6 +62,7 @@ export default function UserManagementPage() {
     }
     setLoading(false);
   };
+
 
   useEffect(() => {
     loadData();
