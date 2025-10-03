@@ -46,12 +46,14 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
       if (!error && user) {
         console.log("👤 Auth user:", user);
   
-        // Récupère l’org_id depuis user_profiles
+        // Récupérer org_id depuis user_profiles
         const { data: profile, error: profileError } = await supabase
           .from("user_profiles")
           .select("org_id")
-          .eq("id", user.id)
+          .eq("id", user.id)   // ✅ ici c'est bien "id" = FK vers auth.users.id
           .single();
+  
+        console.log("📋 Profile récupéré:", profile, profileError);
   
         if (profileError) {
           console.error("❌ Erreur récupération org_id:", profileError);
@@ -60,7 +62,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           console.log("🔑 org_id récupéré:", profile?.org_id);
           setCurrentUserState({
             ...user,
-            org_id: profile?.org_id || null,
+            org_id: profile?.org_id || null,   // ✅ fusionne avec l’utilisateur
           });
         }
       }
@@ -68,7 +70,6 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   
     loadUser();
   }, []);
-
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
