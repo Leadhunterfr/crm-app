@@ -19,20 +19,25 @@ import { fr } from "date-fns/locale";
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [orgSeats, setOrgSeats] = useState(null); // ✅ nombre total de sièges
   const [loading, setLoading] = useState(true);
 
-  // Charger utilisateur courant
-  const loadCurrentUser = async () => {
+  // Charger utilisateur courant + organisation
+  const loadCurrentUserAndOrg = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    // Profil utilisateur
+    const { data: profile } = await supabase
       .from("user_profiles")
-      .select("*")
+      .select("*, organizations(seat)")
       .eq("id", user.id)
       .single();
 
-    if (!error) setCurrentUser(data);
+    if (profile) {
+      setCurrentUser(profile);
+      setOrgSeats(profile.organizations?.seat || 0); // ✅ nombre de sièges
+    }
   };
 
   // Charger tous les utilisateurs de la même organisation
@@ -64,64 +69,11 @@ export default function UserManagementPage() {
   };
 
   useEffect(() => {
-    loadCurrentUser();
+    loadCurrentUserAndOrg();
     loadUsers();
   }, []);
 
-  const handleRoleChange = async (userId, newRole) => {
-    const { error } = await supabase
-      .from("user_profiles")
-      .update({ role: newRole })
-      .eq("id", userId);
-
-    if (!error) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-      );
-    }
-  };
-
-  const getRoleColor = (role) =>
-    role === "admin"
-      ? "bg-orange-100 text-orange-800 border-orange-200"
-      : "bg-blue-100 text-blue-800 border-blue-200";
-
-  const getRoleIcon = (role) => (role === "admin" ? Crown : UserIcon);
-
-  const getLastSeenStatus = (lastSeen) => {
-    if (!lastSeen)
-      return { text: "Jamais connecté", color: "text-gray-500", icon: XCircle };
-
-    const now = new Date();
-    const lastSeenDate = new Date(lastSeen);
-    const diffInMinutes = (now - lastSeenDate) / (1000 * 60);
-
-    if (diffInMinutes < 5) {
-      return { text: "En ligne", color: "text-green-600", icon: CheckCircle };
-    } else if (diffInMinutes < 60) {
-      return { text: `Il y a ${Math.floor(diffInMinutes)} min`, color: "text-blue-600", icon: Clock };
-    } else if (diffInMinutes < 1440) {
-      return { text: `Il y a ${Math.floor(diffInMinutes / 60)}h`, color: "text-yellow-600", icon: Clock };
-    } else {
-      return {
-        text: format(lastSeenDate, "dd MMM yyyy", { locale: fr }),
-        color: "text-gray-500",
-        icon: Clock,
-      };
-    }
-  };
-
-  const stats = {
-    total: users.length,
-    admins: users.filter((u) => u.role === "admin").length,
-    users: users.filter((u) => u.role === "user").length,
-    online: users.filter((u) => {
-      if (!u.last_seen) return false;
-      const diffInMinutes = (new Date() - new Date(u.last_seen)) / (1000 * 60);
-      return diffInMinutes < 5;
-    }).length,
-  };
-
+  // === Rendu ===
   if (loading) return <p className="p-6">Chargement...</p>;
 
   return (
@@ -129,17 +81,18 @@ export default function UserManagementPage() {
       <div className="max-w-7xl mx-auto">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Exemple de stat */}
           <motion.div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border">
-            <p>Total utilisateurs</p>
-            <h3 className="text-2xl font-bold">{stats.total}</h3>
+            <p>Utilisateurs</p>
+            <h3 className="text-2xl font-bold">
+              {users.length}{orgSeats ? ` / ${orgSeats}` : ""} {/* ✅ 2/5 sièges */}
+            </h3>
           </motion.div>
         </div>
 
         {/* Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Utilisateurs</CardTitle>
+            <CardTitle>Utilisateurs de l'organisation</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -153,9 +106,11 @@ export default function UserManagementPage() {
               </TableHeader>
               <TableBody>
                 {users.map((u) => {
-                  const roleIcon = getRoleIcon(u.role);
-                  const roleColor = getRoleColor(u.role);
-                  const lastSeen = getLastSeenStatus(u.last_seen);
+                  const roleIcon = u.role === "admin" ? Crown : UserIcon;
+                  const roleColor =
+                    u.role === "admin"
+                      ? "bg-orange-100 text-orange-800 border-orange-200"
+                      : "bg-blue-100 text-blue-800 border-blue-200";
 
                   return (
                     <TableRow key={u.id}>
@@ -167,9 +122,8 @@ export default function UserManagementPage() {
                           {u.role}
                         </Badge>
                       </TableCell>
-                      <TableCell className={lastSeen.color}>
-                        {React.createElement(lastSeen.icon, { className: "w-3 h-3 mr-1 inline" })}
-                        {lastSeen.text}
+                      <TableCell>
+                        {u.last_seen ? format(new Date(u.last_seen), "dd MMM yyyy HH:mm", { locale: fr }) : "Jamais"}
                       </TableCell>
                     </TableRow>
                   );
