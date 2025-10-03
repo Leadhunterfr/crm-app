@@ -138,7 +138,10 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
       console.log("🗺 Mapping:", mapping);
   
       const mappedContacts = rawData
-        .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
+        .filter((r) => {
+          // on garde la ligne si au moins "societe" OU "email" est rempli
+          return r[mapping["societe"]] || r[mapping["email"]];
+        })
         .map((r) => {
           let obj = {};
           Object.entries(mapping).forEach(([field, csvCol]) => {
@@ -148,8 +151,13 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           obj.user_id = currentUserState?.id || null;
           return obj;
         });
-  
-      console.log("📥 Insert payload:", mappedContacts);
+
+      if (mappedContacts.length === 0) {
+        setErrorMsg("⚠️ Aucun contact valide n’a été trouvé. Vérifie ton mapping (au moins Email ou Société).");
+        setImporting(false);
+        return;
+      }
+
   
       if (mappedContacts.length > 0) {
         const { data, error } = await supabase.from("contacts").insert(mappedContacts);
