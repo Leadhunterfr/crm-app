@@ -44,28 +44,28 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     const loadUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!error && user) {
-        // récupérer org_id dans user_profiles
+        // on va chercher l’org_id dans user_profiles
         const { data: profile, error: profileError } = await supabase
           .from("user_profiles")
           .select("org_id")
           .eq("id", user.id)
           .single();
   
-        if (!profileError) {
+        if (profileError) {
+          console.error("❌ Erreur récupération org_id:", profileError);
+          setCurrentUserState(user); // fallback
+        } else {
+          console.log("🔑 org_id récupéré:", profile?.org_id);
           setCurrentUserState({
             ...user,
             org_id: profile?.org_id || null
           });
-          console.log("🔑 org_id chargé:", profile?.org_id);
-        } else {
-          console.error("Erreur chargement org_id:", profileError);
-          setCurrentUserState(user); // fallback sans org_id
         }
       }
     };
+  
     if (!currentUser) loadUser();
   }, [currentUser]);
-
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
