@@ -119,7 +119,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={() => onClose && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import/Export des contacts</DialogTitle>
@@ -191,7 +191,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                   <Button variant="outline" onClick={() => setStep("upload")}>
                     Annuler
                   </Button>
-                  <Button onClick={handleConfirmMapping} disabled={importing}>
+                  <Button onClick={() => handleConfirmMapping()} disabled={importing}>
                     {importing ? "Import..." : "Confirmer"}
                   </Button>
                 </div>
