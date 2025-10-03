@@ -61,7 +61,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         email: c.email,
         telephone: c.telephone,
         adresse: c.adresse,
-        site: c.site_web,
+        site_web: c.site_web,
         linkedin: c.linkedin,
         source: c.source,
         statut: c.statut,
