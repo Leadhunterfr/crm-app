@@ -1,4 +1,5 @@
 // components/contacts/ImportExportDialog.js
+"use client";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,15 +26,18 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
 
-  const [ setCurrentUser] = useState(null);
+  const [currentUserState, setCurrentUserState] = useState(currentUser || null);
 
   useEffect(() => {
-    const loadUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (!error) setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
+    if (!currentUser) {
+      const loadUser = async () => {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (!error) setCurrentUserState(user);
+      };
+      loadUser();
+    }
+  }, [currentUser]);
+
 
   // 🔹 Export
   const handleExport = async (format = "csv") => {
@@ -111,8 +115,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           Object.entries(mapping).forEach(([field, csvCol]) => {
             obj[field] = r[csvCol] || "";
           });
-          obj.org_id = currentUser?.user_metadata?.org_id || null;
-          obj.user_id = currentUser?.id || null;
+          obj.org_id = currentUserState?.user_metadata?.org_id || null;
+          obj.user_id = currentUserState?.id || null;
           return obj;
         });
 
