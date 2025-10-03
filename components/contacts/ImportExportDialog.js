@@ -1,4 +1,3 @@
-// components/contacts/ImportExportDialog.js
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,14 +19,12 @@ export default function ImportExportDialog({
   currentUser,
   onImportComplete,
 }) {
-  const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [mapping, setMapping] = useState({});
   const [rawColumns, setRawColumns] = useState([]);
   const [rawData, setRawData] = useState([]);
   const [step, setStep] = useState("upload");
-  const [tab, setTab] = useState("export"); // ✅ on contrôle l’onglet actif
 
   const supabaseFields = [
     "prenom",
@@ -57,7 +54,7 @@ export default function ImportExportDialog({
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
-    console.log("handleExport CALLED with format:", format, "contacts:", contacts);
+    console.log("handleExport CALLED:", format);
     setExporting(true);
 
     try {
@@ -72,8 +69,11 @@ export default function ImportExportDialog({
         temperature: c.temperature,
       }));
 
+      console.log("Export data ready:", exportData);
+
       if (format === "csv") {
         const csv = Papa.unparse(exportData);
+        console.log("CSV generated:", csv.slice(0, 100));
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -98,13 +98,14 @@ export default function ImportExportDialog({
 
   // ---------------- IMPORT (parsing) ----------------
   const handleFileUpload = (file) => {
+    console.log("File upload triggered:", file);
     if (!file) return;
-    setImportFile(file);
 
     if (file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
+          console.log("Parsed CSV results:", results.data.slice(0, 3));
           setRawColumns(Object.keys(results.data[0] || {}));
           setRawData(results.data);
           setStep("mapping");
@@ -116,6 +117,7 @@ export default function ImportExportDialog({
         const wb = XLSX.read(e.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        console.log("Parsed XLSX JSON:", json.slice(0, 3));
         setRawColumns(json[0]);
         setRawData(
           json.slice(1).map((row) => {
@@ -132,7 +134,9 @@ export default function ImportExportDialog({
 
   // ---------------- IMPORT (insertion) ----------------
   const handleConfirmMapping = async () => {
+    console.log("Confirm mapping clicked, mapping:", mapping);
     setImporting(true);
+
     try {
       const mappedContacts = rawData
         .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
@@ -146,11 +150,12 @@ export default function ImportExportDialog({
           return obj;
         });
 
+      console.log("Mapped contacts ready to insert:", mappedContacts);
+
       if (mappedContacts.length > 0) {
-        const { error } = await supabase
-          .from("contacts")
-          .insert(mappedContacts);
+        const { error } = await supabase.from("contacts").insert(mappedContacts);
         if (error) throw error;
+        console.log("Contacts imported successfully");
       }
       if (onImportComplete) onImportComplete();
       onClose();
@@ -169,8 +174,7 @@ export default function ImportExportDialog({
           <DialogTitle>Import/Export des contacts</DialogTitle>
         </DialogHeader>
 
-        {/* ✅ Tabs contrôlés */}
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <Tabs defaultValue="export" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="export">Export</TabsTrigger>
             <TabsTrigger value="import">Import</TabsTrigger>
@@ -180,17 +184,42 @@ export default function ImportExportDialog({
           <TabsContent value="export" className="space-y-4">
             <div className="text-center py-6">
               <FileSpreadsheet className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Exporter les contacts</h3>
+              <h3 className="text-lg font-medium mb-2">
+                Exporter les contacts
+              </h3>
               <p className="text-sm text-slate-600 mb-4">
-                {contacts.length} contact{contacts.length > 1 ? "s" : ""} à exporter
+                {contacts.length} contact{contacts.length > 1 ? "s" : ""} à
+                exporter
               </p>
-              <div className="flex gap-3">
-                <Button onClick={() => handleExport("csv")} disabled={exporting}>
+              <div className="flex gap-3 justify-center">
+                {/* Bouton natif test */}
+                <button
+                  onClick={() => console.log("✅ Bouton natif cliqué")}
+                  className="px-4 py-2 bg-red-500 text-white rounded"
+                >
+                  Bouton natif
+                </button>
+
+                {/* Bouton Shadcn test */}
+                <Button
+                  onClick={() => console.log("✅ Bouton Shadcn cliqué")}
+                  className="bg-blue-600 text-white"
+                >
+                  Test Shadcn
+                </Button>
+
+                {/* Boutons réels */}
+                <Button
+                  onClick={() => handleExport("csv")}
+                  disabled={exporting}
+                  className="bg-green-600 text-white"
+                >
                   <Download className="w-4 h-4 mr-2" /> CSV
                 </Button>
                 <Button
                   onClick={() => handleExport("xlsx")}
                   disabled={exporting}
+                  className="bg-yellow-600 text-white"
                 >
                   <Download className="w-4 h-4 mr-2" /> Excel
                 </Button>
@@ -203,7 +232,9 @@ export default function ImportExportDialog({
             {step === "upload" && (
               <div className="text-center py-6">
                 <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Importer des contacts</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  Importer des contacts
+                </h3>
                 <input
                   type="file"
                   accept=".csv,.xlsx"
