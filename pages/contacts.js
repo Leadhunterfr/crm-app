@@ -11,7 +11,7 @@ import ContactFilters from "@/components/contacts/ContactFilters";
 import ImportExportDialog from "@/components/contacts/ImportExportDialog";
 import ColumnManager from "@/components/contacts/ColumnManager";
 import ChatSidebar from "@/components/contacts/ChatSidebar";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 
 // Colonnes par défaut
 const DEFAULT_COLUMNS = [
@@ -29,12 +29,15 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Auth user
+  // 🔹 Auth user
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
       if (!error) setCurrentUser(user);
     };
     loadUser();
@@ -55,10 +58,11 @@ export default function ContactsPage() {
 
   // Colonnes visibles
   const [columns, setColumns] = useState(() => {
-    const saved =
-      typeof window !== "undefined" &&
-      localStorage.getItem("contacts-columns");
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("contacts-columns");
+      return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    }
+    return DEFAULT_COLUMNS;
   });
 
   // 🔹 Charger les contacts depuis Supabase
@@ -93,7 +97,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     loadContacts();
-  }, [filters, searchQuery]); // recharger à chaque changement
+  }, [filters, searchQuery]);
 
   // 🔹 Handlers CRUD
   const handleCreateContact = async (contactData) => {
@@ -215,14 +219,14 @@ export default function ContactsPage() {
         {showContactForm && (
           <ContactForm
             open={showContactForm}
-            contact={null} // création
+            contact={null}
             onClose={() => setShowContactForm(false)}
-            onSaved={loadContacts} // recharge les contacts après création
+            onSaved={loadContacts}
           />
         )}
         {editingContact && (
           <ContactForm
-            open={true} // forcé ouvert
+            open={true}
             contact={editingContact}
             onClose={() => {
               setShowContactForm(false);
@@ -231,7 +235,6 @@ export default function ContactsPage() {
             onSaved={loadContacts}
           />
         )}
-
         {selectedContact && showContactDetails && (
           <ContactDetails
             contact={selectedContact}
@@ -250,7 +253,7 @@ export default function ContactsPage() {
           <ImportExportDialog
             onClose={() => setShowImportExport(false)}
             contacts={contacts}
-            currentUser={currentUser} 
+            currentUser={currentUser}
             onImportComplete={loadContacts}
           />
         )}
