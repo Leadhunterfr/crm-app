@@ -1,6 +1,6 @@
 // components/contacts/ImportExportDialog.js
 "use client";
-import React, { useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,8 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Download, FileSpreadsheet, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, Download, FileSpreadsheet } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabaseClient";
@@ -22,7 +21,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
   const [mapping, setMapping] = useState({});
   const [rawColumns, setRawColumns] = useState([]);
   const [rawData, setRawData] = useState([]);
-  const [step, setStep] = useState("upload"); // upload | mapping
+  const [step, setStep] = useState("upload"); 
 
   const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
 
@@ -38,10 +37,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     }
   }, [currentUser]);
 
-
-  // 🔹 Export
-  const handleExport = async (format = "csv") => {
-    setExporting(true);
+  // ---------------- EXPORT ----------------
+  const handleExport = (format) => {
     try {
       const exportData = contacts.map(c => ({
         prenom: c.prenom,
@@ -70,13 +67,16 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
       }
     } catch (err) {
       console.error("Erreur export:", err);
+    } finally {
+      setExporting(false);
     }
-    setExporting(false);
   };
 
-  // 🔹 Import parsing
+  // ---------------- IMPORT (parsing) ----------------
   const handleFileUpload = (file) => {
+    if (!file) return;
     setImportFile(file);
+
     if (file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
@@ -93,18 +93,20 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
         setRawColumns(json[0]);
-        setRawData(json.slice(1).map((row) => {
-          let obj = {};
-          json[0].forEach((col, i) => (obj[col] = row[i]));
-          return obj;
-        }));
+        setRawData(
+          json.slice(1).map((row) => {
+            let obj = {};
+            json[0].forEach((col, i) => (obj[col] = row[i]));
+            return obj;
+          })
+        );
         setStep("mapping");
       };
       reader.readAsBinaryString(file);
     }
   };
 
-  // 🔹 Import insertion
+  // ---------------- IMPORT (insertion) ----------------
   const handleConfirmMapping = async () => {
     setImporting(true);
     try {
@@ -128,12 +130,14 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
       onClose();
     } catch (err) {
       console.error("Erreur import:", err);
+    } finally {
+      setImporting(false);
     }
-    setImporting(false);
   };
 
+  // ---------------- RENDER ----------------
   return (
-    <Dialog open={true} onOpenChange={() => onClose && onClose()}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import/Export des contacts</DialogTitle>
@@ -157,10 +161,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                 <Button onClick={() => handleExport("csv")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> CSV
                 </Button>
-                
                 <Button onClick={() => handleExport("xlsx")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> Excel
-                </Button>
                 </Button>
               </div>
             </div>
