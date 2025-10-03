@@ -91,15 +91,18 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   // ---------------- IMPORT (parsing) ----------------
   const handleFileUpload = (file) => {
+    console.log("📂 handleFileUpload CALLED with file:", file?.name);
     if (!file) return;
-
+  
     if (file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
+          console.log("📊 Parsed CSV:", results.data.slice(0, 5));
           setRawColumns(Object.keys(results.data[0] || {}));
           setRawData(results.data);
-          setStep("mapping");
+          setStep("mapping"); // <-- log ici
+          console.log("✅ Step set to mapping");
         },
       });
     } else if (file.name.endsWith(".xlsx")) {
@@ -108,6 +111,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         const wb = XLSX.read(e.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        console.log("📊 Parsed XLSX:", json.slice(0, 5));
         setRawColumns(json[0]);
         setRawData(
           json.slice(1).map((row) => {
@@ -117,16 +121,22 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           })
         );
         setStep("mapping");
+        console.log("✅ Step set to mapping");
       };
       reader.readAsBinaryString(file);
     }
   };
 
+
   // ---------------- IMPORT (insertion) ----------------
   const handleConfirmMapping = async () => {
+    console.log("🚀 handleConfirmMapping CALLED");
     setImporting(true);
     setErrorMsg("");
     try {
+      console.log("📊 Raw data:", rawData.slice(0, 5));
+      console.log("🗺 Mapping:", mapping);
+  
       const mappedContacts = rawData
         .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
         .map((r) => {
@@ -138,10 +148,11 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           obj.user_id = currentUserState?.id || null;
           return obj;
         });
-
+  
+      console.log("📥 Insert payload:", mappedContacts);
+  
       if (mappedContacts.length > 0) {
-        const { error } = await supabase.from("contacts").insert(mappedContacts);
-        console.log("📥 Insert payload:", mappedContacts);
+        const { data, error } = await supabase.from("contacts").insert(mappedContacts);
         console.log("📤 Supabase response:", { data, error });
         if (error) throw error;
       }
@@ -155,6 +166,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
       setImporting(false);
     }
   };
+
 
   // ---------------- RENDER ----------------
   return (
