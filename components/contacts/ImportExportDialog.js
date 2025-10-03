@@ -14,23 +14,41 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function ImportExportDialog({ onClose, contacts, currentUser, onImportComplete }) {
+export default function ImportExportDialog({
+  onClose,
+  contacts,
+  currentUser,
+  onImportComplete,
+}) {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [mapping, setMapping] = useState({});
   const [rawColumns, setRawColumns] = useState([]);
   const [rawData, setRawData] = useState([]);
-  const [step, setStep] = useState("upload"); 
+  const [step, setStep] = useState("upload");
+  const [tab, setTab] = useState("export"); // ✅ on contrôle l’onglet actif
 
-  const supabaseFields = ["prenom", "nom", "societe", "email", "telephone", "statut", "source", "temperature"];
+  const supabaseFields = [
+    "prenom",
+    "nom",
+    "societe",
+    "email",
+    "telephone",
+    "statut",
+    "source",
+    "temperature",
+  ];
 
   const [currentUserState, setCurrentUserState] = useState(currentUser || null);
 
   useEffect(() => {
     if (!currentUser) {
       const loadUser = async () => {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
         if (!error) setCurrentUserState(user);
       };
       loadUser();
@@ -39,9 +57,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
   // ---------------- EXPORT ----------------
   const handleExport = (format) => {
-    console.log("handleExport CALLED with format:", format, "contacts:", contacts); // 🔍 log ici
+    console.log("handleExport CALLED with format:", format, "contacts:", contacts);
     setExporting(true);
-  
+
     try {
       const exportData = contacts.map((c) => ({
         prenom: c.prenom,
@@ -53,12 +71,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         statut: c.statut,
         temperature: c.temperature,
       }));
-  
-      console.log("Export data ready:", exportData); // 🔍 log avant génération fichier
-  
+
       if (format === "csv") {
         const csv = Papa.unparse(exportData);
-        console.log("CSV generated:", csv.slice(0, 100)); // 🔍 log début CSV
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -81,19 +96,15 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     }
   };
 
-
   // ---------------- IMPORT (parsing) ----------------
   const handleFileUpload = (file) => {
-    console.log("File upload triggered:", file); // 🔍
     if (!file) return;
-  
     setImportFile(file);
-  
+
     if (file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-          console.log("Parsed CSV results:", results.data.slice(0, 3)); // 🔍
           setRawColumns(Object.keys(results.data[0] || {}));
           setRawData(results.data);
           setStep("mapping");
@@ -105,7 +116,6 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         const wb = XLSX.read(e.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        console.log("Parsed XLSX JSON:", json.slice(0, 3)); // 🔍
         setRawColumns(json[0]);
         setRawData(
           json.slice(1).map((row) => {
@@ -120,12 +130,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     }
   };
 
-
-   // ---------------- IMPORT (insertion) ----------------
+  // ---------------- IMPORT (insertion) ----------------
   const handleConfirmMapping = async () => {
-    console.log("Confirm mapping clicked, mapping:", mapping); // 🔍
     setImporting(true);
-  
     try {
       const mappedContacts = rawData
         .filter((r) => r[mapping["nom"]] && r[mapping["email"]])
@@ -138,13 +145,12 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           obj.user_id = currentUserState?.id || null;
           return obj;
         });
-  
-      console.log("Mapped contacts ready to insert:", mappedContacts); // 🔍
-  
+
       if (mappedContacts.length > 0) {
-        const { error } = await supabase.from("contacts").insert(mappedContacts);
+        const { error } = await supabase
+          .from("contacts")
+          .insert(mappedContacts);
         if (error) throw error;
-        console.log("Contacts imported successfully"); // 🔍
       }
       if (onImportComplete) onImportComplete();
       onClose();
@@ -163,7 +169,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           <DialogTitle>Import/Export des contacts</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="export" className="w-full">
+        {/* ✅ Tabs contrôlés */}
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="export">Export</TabsTrigger>
             <TabsTrigger value="import">Import</TabsTrigger>
@@ -178,14 +185,13 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                 {contacts.length} contact{contacts.length > 1 ? "s" : ""} à exporter
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => handleExport("csv")}
+                <Button onClick={() => handleExport("csv")} disabled={exporting}>
+                  <Download className="w-4 h-4 mr-2" /> CSV
+                </Button>
+                <Button
+                  onClick={() => handleExport("xlsx")}
                   disabled={exporting}
-                  className="px-4 py-2 rounded bg-blue-600 text-white"
                 >
-                  Test CSV
-                </button>
-                <Button onClick={() => handleExport("xlsx")} disabled={exporting}>
                   <Download className="w-4 h-4 mr-2" /> Excel
                 </Button>
               </div>
@@ -209,7 +215,9 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
             {step === "mapping" && (
               <div>
-                <h3 className="font-medium mb-4">Faites correspondre les colonnes</h3>
+                <h3 className="font-medium mb-4">
+                  Faites correspondre les colonnes
+                </h3>
                 {supabaseFields.map((field) => (
                   <div key={field} className="flex gap-3 items-center mb-2">
                     <span className="w-40 font-medium">{field}</span>
@@ -217,7 +225,10 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
                       className="border rounded p-1 flex-1"
                       value={mapping[field] || ""}
                       onChange={(e) =>
-                        setMapping((prev) => ({ ...prev, [field]: e.target.value }))
+                        setMapping((prev) => ({
+                          ...prev,
+                          [field]: e.target.value,
+                        }))
                       }
                     >
                       <option value="">-- Ne pas importer --</option>
