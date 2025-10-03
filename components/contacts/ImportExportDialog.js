@@ -31,7 +31,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
     "email",
     "telephone",
     "adresse",
-    "site",
+    "site_web",
     "linkedin",
     "statut",
     "source",
