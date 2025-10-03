@@ -13,17 +13,6 @@ import ColumnManager from "@/components/contacts/ColumnManager";
 import ChatSidebar from "@/components/contacts/ChatSidebar";
 import { motion, AnimatePresence } from "framer-motion";
 
-
-const [currentUser, setCurrentUser] = useState(null);
-
-useEffect(() => {
-  const loadUser = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (!error) setCurrentUser(user);
-  };
-  loadUser();
-}, []);
-
 // Colonnes par défaut
 const DEFAULT_COLUMNS = [
   { id: "prenom", label: "Prénom", visible: true, width: "150px" },
@@ -39,6 +28,17 @@ const DEFAULT_COLUMNS = [
 export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Auth user
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error) setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
 
   // UI state
   const [selectedContact, setSelectedContact] = useState(null);
@@ -93,7 +93,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     loadContacts();
-  }, [filters, searchQuery]); // recharger à chaque changement de filtre ou recherche
+  }, [filters, searchQuery]); // recharger à chaque changement
 
   // 🔹 Handlers CRUD
   const handleCreateContact = async (contactData) => {
