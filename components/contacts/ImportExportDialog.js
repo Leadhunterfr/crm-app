@@ -61,7 +61,7 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
         email: c.email,
         telephone: c.telephone,
         adresse: c.adresse,
-        site: c.site,
+        site: c.site_web,
         linkedin: c.linkedin,
         source: c.source,
         statut: c.statut,
@@ -141,6 +141,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
 
       if (mappedContacts.length > 0) {
         const { error } = await supabase.from("contacts").insert(mappedContacts);
+        console.log("📥 Insert payload:", mappedContacts);
+        console.log("📤 Supabase response:", { data, error });
         if (error) throw error;
       }
       if (onImportComplete) onImportComplete();
