@@ -171,6 +171,8 @@ export default function ImportExportDialog({ onClose, contacts, currentUser, onI
           });
           obj.org_id = currentUserState?.org_id || null;
           obj.user_id = currentUserState?.id || null;
+          obj.statut = "Prospect";
+          obj.temperature = "Tiède";
           return obj;
         });
 
