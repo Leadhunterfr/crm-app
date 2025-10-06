@@ -14,7 +14,7 @@ export default function Layout({ children }) {
   return (
     <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 fixed top-0 left-0 h-screen flex flex-col">
+      <aside className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 fixed top-0 left-0 h-screen flex flex-col z-50 shadow-lg">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">CRM App</h1>
         </div>
@@ -47,7 +47,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 ml-64 p-6">{children}</main>
+      <main className="flex-1 ml-64 p-6 relative z-0">{children}</main>
     </div>
   );
 }
